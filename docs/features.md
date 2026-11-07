@@ -7,7 +7,3 @@ Feature Inventory
 | F-04 | Admin Order Status Management | หน้าสำหรับ Admin เรียกดูรายการคำสั่งซื้อทั้งหมด และอัปเดตสถานะตาม Lifecycle | FR-03, BR-03 | Sprint 1 | Admin |
 | F-05 | Role-Based Access Control & Auth | ระบบ Login/Logout และจำกัดสิทธิ์ API Endpoints ตามบทบาทผู้ใช้ | NFR-01 | Sprint 1 | All Actors |
 | F-06 | Advanced Inventory & Supplier Management | ระบบจัดการซัพพลายเออร์และการนำเข้าสต็อกระดับสูง (Explicit Exclusion for Sprint 1) | EX-02 | Sprint 3 | Admin |
-.
-.
-.
-traceability.md
