@@ -7,14 +7,14 @@
 | Sprint | Target Date / Checkpoint | Focus Area / Outcome & Scope | Included Feature / Scope IDs | Key Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sprint 1** | **15 Nov 2026**<br>*(Deliverable 1)* | **Core Slice Baseline:** ระบบแกนหลักที่ทำงานได้จริง ตั้งแต่ UI, API ไปจนถึง Database การยืนยันตัวตนด้วย Cookie JWT, การจัดการสิทธิ์ (RBAC), การแสดงรายการสินค้า, การสร้างคำสั่งซื้อพร้อมตัดสต็อกฝั่ง Server และการเปลี่ยนสถานะออเดอร์โดย Admin | **F-01**, **F-02**, **F-03**, **F-04**, **F-05** | PostgreSQL, Prisma Schema Setup, Express API Structure |
-| **Sprint 2** | **15 Nov 2026**<br>*(Deliverable 2)* | **Core Expansion & Gateway Integration:** ขยายระบบให้รองรับระบบตะกร้าสินค้า (Cart Management), การค้นหาและกรองสินค้า (Advanced Search & Filter), การจำลองระบบชำระเงิน (Mock Payment Gateway Integration) และการปรับปรุงประสิทธิภาพ Query | **EX-01** (Mock Payment Status), Core Features Enhancement | Completed Sprint 1 Baseline API & Database Schema |
-| **Sprint 3** | **29 Nov 2026**<br>*(Final Complete)* | **Product Hardening & Advanced Modules:** เพิ่มระบบจัดการซัพพลายเออร์และคลังสินค้าขั้นสูง, ระบบกระบวนการคืนสินค้า/คืนเงิน, ระบบวิเคราะห์ข้อมูล (Analytics Dashboard), การทำ Docker Containerization และ GCP Cloud Deployment | **F-06** (Advanced Inventory), **EX-02**, **EX-03** (Refunds Workflow) | Completed Sprint 2 Engine & Stable API Contracts |
+| **Sprint 2** | **29 Nov 2026**<br>*(Deliverable 2)* | **Core Expansion & Gateway Integration:** ขยายระบบให้รองรับระบบตะกร้าสินค้า (Cart Management), การค้นหาและกรองสินค้า (Advanced Search & Filter), การจำลองระบบชำระเงิน (Mock Payment Gateway Integration) และการปรับปรุงประสิทธิภาพ Query | **EX-01** (Mock Payment Status), Core Features Enhancement | Completed Sprint 1 Baseline API & Database Schema |
+| **Sprint 3** | **13 Dec 2026**<br>*(Final Complete)* | **Product Hardening & Advanced Modules:** เพิ่มระบบจัดการซัพพลายเออร์และคลังสินค้าขั้นสูง, ระบบกระบวนการคืนสินค้า/คืนเงิน, ระบบวิเคราะห์ข้อมูล (Analytics Dashboard), การทำ Docker Containerization และ GCP Cloud Deployment | **F-06** (Advanced Inventory), **EX-02**, **EX-03** (Refunds Workflow) | Completed Sprint 2 Engine & Stable API Contracts |
 
 ---
 
 ## 2. Detailed Sprint Objectives & Scope Boundaries
 
-### Sprint 1: Core Slice Baseline (Target: 8 Nov 2026)
+### Sprint 1: Core Slice Baseline (Target: 15 Nov 2026)
 - **Goal:** ส่งมอบ Vertical Slice แกนหลักที่ทำงานได้จริง end-to-end พร้อมการตรวจสอบความถูกต้องฝั่ง Server
 - **Key Features & Scope Justification:**
   1. **Product Catalog & Order Creation (`F-01`, `F-02`, `F-03`):** ครอบคลุมการแสดงรายการสินค้าพร้อมสต็อกจริง การส่งคำสั่งซื้อ และการตรวจสอบ/ตัดสต็อกฝั่ง Server (Authoritative Server-Side Pricing) ภายใต้ Database Transaction เพื่อรักษา Data Integrity และป้องกัน Race Condition
