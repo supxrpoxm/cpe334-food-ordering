@@ -1,0 +1,152 @@
+# ##############################################################################
+# CI — "CI & Docker Build"
+# ##############################################################################
+# WHAT THIS WORKFLOW DOES
+#   Runs the project's checks and is used in two ways:
+#     1) directly on every pull request to `main` (and manually), and
+#     2) as a REUSABLE workflow called by deploy.yml (`workflow_call`) so the
+#        deploy only starts after these checks pass.
+#   Steps: offline deploy-script tests -> backend tests (real PostgreSQL service)
+#          -> frontend tests + build -> verify the production Dockerfile builds.
+#   It does NOT deploy anything.
+#
+# ⚠️ DO NOT RENAME (the lab guide refers to these names):
+#   - job id : test-and-docker
+#   - deploy.yml uses `environment: demo` and the 4 variables GCP_PROJECT_ID,
+#     GCP_REGION, WIF_PROVIDER, WIF_SERVICE_ACCOUNT — keep those names too.
+#
+# REFERENCES
+#   - Workflow syntax      : https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions
+#   - Reusable workflows   : https://docs.github.com/en/actions/sharing-automations/reusing-workflows
+#   - Service containers   : https://docs.github.com/en/actions/using-containerized-services/about-service-containers
+#   - Concurrency          : https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs
+#   - Pin actions to a SHA : https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions
+#
+# ⭐ CHANGE ME — groups using another tech stack must edit (marked below):
+#   # CHANGE ME: database service image / credentials
+#   # CHANGE ME: language setup steps (Node.js 24, Python 3.14)
+#   # CHANGE ME: install / migrate / seed / test commands, working-directory
+#   # CHANGE ME: docker image tag
+# ##############################################################################
+
+name: CI & Docker Build
+
+# ------------------------------------------------------------------------------
+# Triggers
+#   workflow_call     : lets deploy.yml reuse this workflow (do not remove).
+#   pull_request/main : checks every PR before merge.
+#   workflow_dispatch : manual "Run workflow" button.
+# ------------------------------------------------------------------------------
+on:
+  workflow_call:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: this workflow only needs to read the repository.
+permissions:
+  contents: read
+
+# A newer run on the same ref cancels the older one (saves minutes).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ⚠️ Job id must stay `test-and-docker`.
+  test-and-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # --------------------------------------------------------------------------
+    # Temporary PostgreSQL used only by the tests. Throw-away CI values, not
+    # real secrets. CHANGE ME: use the database your project needs.
+    # --------------------------------------------------------------------------
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: toktickit
+          POSTGRES_PASSWORD: toktickit
+          POSTGRES_DB: toktickit
+        ports:
+          - 5432:5432
+        # Wait until the DB is healthy before the steps start.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      # ------------------------------------------------------------------------
+      # 1. Get the source code
+      #    (third-party actions are pinned to a commit SHA; the comment shows the
+      #     version. Dependabot keeps them updated — see .github/dependabot.yml)
+      # ------------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # ------------------------------------------------------------------------
+      # 2. Language runtimes
+      #    CHANGE ME: replace with the runtime(s) your stack needs.
+      # ------------------------------------------------------------------------
+      - name: Setup Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      # Python is only needed for the deploy smoke-test unit tests below.
+      - name: Setup Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # ------------------------------------------------------------------------
+      # 3. Deploy scripts: syntax check + offline tests (NO access to GCP)
+      #    ⭐ IMPORTANT: guards deploy.sh / release.sh / smoke_test.py so a broken
+      #    script is caught before it can break a deployment.
+      #    CHANGE ME: keep only the checks for scripts your group actually uses.
+      # ------------------------------------------------------------------------
+      - name: Check deployment scripts without accessing GCP
+        run: |
+          bash -n deploy/deploy.sh deploy/teardown.sh deploy/release.sh
+          bash deploy/tests/test_deploy_stub.sh
+          bash deploy/tests/test_release_stub.sh
+          python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
+
+      # ------------------------------------------------------------------------
+      # 4. Backend: install -> migrate -> seed -> test
+      #    ⭐ IMPORTANT: a failing test fails the job (and therefore the deploy).
+      #    CHANGE ME: working-directory, DATABASE_URL and every command in `run:`.
+      # ------------------------------------------------------------------------
+      - name: Install & Test Backend (Prisma Migrate + Seed + Vitest)
+        working-directory: ./server
+        env:
+          DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=public
+        run: |
+          npm ci
+          npx prisma migrate deploy
+          npm run prisma:seed
+          npm test
+
+      # ------------------------------------------------------------------------
+      # 5. Frontend: install -> test -> production build
+      #    CHANGE ME: remove or replace if there is no separate frontend.
+      # ------------------------------------------------------------------------
+      - name: Install, Test & Build Frontend (Vitest + Production Build)
+        working-directory: ./client
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      # ------------------------------------------------------------------------
+      # 6. Make sure the production image still builds (image is not pushed here)
+      #    CHANGE ME: image tag.
+      # ------------------------------------------------------------------------
+      - name: Verify Unified Production Dockerfile Build
+        run: |
+          docker build -t toktickit-lab4:latest .
