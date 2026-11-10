@@ -160,6 +160,7 @@
 | **STS-F03-12** | AC-05 | Unit (Negative / Boundary) | Product A `price = 99999999.99`; Customer ที่ผ่าน Auth | เรียก Engine ด้วย `quantity` ที่ทำให้ `totalAmount` เกิน `Decimal(10,2)` | ได้ `AMOUNT_OUT_OF_RANGE` (Map เป็น `400`); Transaction Rollback; ไม่มี Order; สต็อกไม่เปลี่ยน |
 
 ## 5. Completion Evidence
-
-- **TDD Evidence:** [รอใส่ลิงก์ Commit ที่ Test Failed และ Passed หลังเขียนโค้ดจริง]
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังโค้ดผ่านการรีวิว]
+- **TDD Evidence:**
+  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
+  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
+- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]
