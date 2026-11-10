@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import cors from 'cors';
 import express from 'express';
 import { ApiError } from './lib/errors';
 import adminOrderRoutes from './routes/adminOrderRoutes';
@@ -8,7 +9,12 @@ import productRoutes from './routes/productRoutes';
 
 const app = express();
 
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
+
+app.get('/', (_req, res) =>
+  res.json({ status: 'ok', message: 'Backend is running' }),
+);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);

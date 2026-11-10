@@ -10,22 +10,28 @@
     "pretest": "npm run db:up && npm run db:wait",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "set NODE_ENV=development && set PORT=3001 && set JWT_SECRET=local-development-jwt-secret-do-not-use-in-production && set DATABASE_URL=postgresql://toktickit:toktickit@localhost:5433/toktickit?schema=public && npx tsx server/src/index.ts",
+    "seed": "set DATABASE_URL=postgresql://toktickit:toktickit@localhost:5433/toktickit?schema=public && npx tsx server/prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
     "bcryptjs": "3.0.3",
+    "cors": "^2.8.5",
     "express": "4.21.2",
     "jsonwebtoken": "9.0.3"
   },
   "devDependencies": {
     "@types/express": "5.0.3",
+    "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "24.10.1",
     "@types/supertest": "6.0.3",
     "prisma": "6.19.3",
     "supertest": "7.3.2",
     "typescript": "5.9.3",
-    "vitest": "3.2.7"
+    "vitest": "3.2.7",
+    "tsx": "4.20.6"
   }
 }
