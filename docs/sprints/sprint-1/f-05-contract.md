@@ -188,6 +188,7 @@
 | **STS-F05-12** | AC-07.4, AC-07.5 | Security / API Integration (Negative) | Seed Customer A และ Customer B; Login เป็น A | เรียก `GET /api/orders/:id` ของ B และ `PATCH /api/admin/orders/:id/status` ของ B | `GET` Order ของ B → `403 FORBIDDEN_RESOURCE`; `PATCH` Admin Endpoint → `403 FORBIDDEN_ROLE`; ไม่มีข้อมูลของ B ถูกเปิดเผย |
 
 ## 5. Completion Evidence
-
-- **TDD Evidence:** [รอใส่ลิงก์ Commit ที่ Test Failed และ Passed หลังเขียนโค้ดจริง]
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังโค้ดผ่านการรีวิว]
+- **TDD Evidence:**
+  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
+  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
+- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]

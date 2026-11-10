@@ -174,6 +174,7 @@
 | **STS-F02-12** | AC-02 | API Integration (Negative / Rollback) | Seed Customer, Product; Login แล้ว; จำลอง Database Error ระหว่างสร้าง `OrderItem` | ส่ง Order ที่ผ่าน Validation | ได้ `500 INTERNAL_ERROR`; Transaction Rollback; ไม่มี Order/OrderItem ค้าง; สต็อกไม่ถูกตัด |
 
 ## 5. Completion Evidence
-
-- **TDD Evidence:** [รอใส่ลิงก์ Commit ที่ Test Failed และ Passed หลังเขียนโค้ดจริง]
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังโค้ดผ่านการรีวิว]
+- **TDD Evidence:**
+  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
+  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
+- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]

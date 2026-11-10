@@ -75,5 +75,7 @@
 | STS-F01-03 | AC-F01-03 | API | ไม่มี `productId: invalid_id` ในระบบ | เรียก `GET /api/v1/products/invalid_id` | ได้รับ HTTP 404 Not Found พร้อมรหัสข้อผิดพลาด `PRODUCT_NOT_FOUND` |
 
 ## 5. Completion Evidence
-- **TDD Evidence:** [รอใส่ลิงก์ Commit ที่ Test Failed และ Passed หลังเขียนโค้ดจริง]
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังโค้ดผ่านการรีวิว]
+- **TDD Evidence:**
+  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
+  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
+- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]

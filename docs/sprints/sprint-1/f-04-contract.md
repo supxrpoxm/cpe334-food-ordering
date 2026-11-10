@@ -70,5 +70,7 @@
 | STS-F04-03 | AC-F04-03 | Integration | มีออเดอร์สถานะ `CANCELLED` | เรียก `PATCH /api/v1/admin/orders/ord_2/status` ด้วย `{ "status": "CONFIRMED" }` | ได้รับ HTTP 400 Bad Request |
 
 ## 5. Completion Evidence
-- **TDD Evidence:** [รอใส่ลิงก์ Commit ที่ Test Failed และ Passed หลังเขียนโค้ดจริง]
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังโค้ดผ่านการรีวิว]
+- **TDD Evidence:**
+  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
+  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
+- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]
