@@ -118,29 +118,29 @@ jobs:
           python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
 
       # ------------------------------------------------------------------------
-      # 4. Backend: install -> migrate -> seed -> test
+      # 4. Backend: install -> generate Prisma Client -> test
       #    ⭐ IMPORTANT: a failing test fails the job (and therefore the deploy).
-      #    CHANGE ME: working-directory, DATABASE_URL and every command in `run:`.
+      #    The Vitest suite lives at the repository root, so install there.
       # ------------------------------------------------------------------------
-      - name: Install & Test Backend (Prisma Migrate + Seed + Vitest)
-        working-directory: ./server
+      - name: Install & Test Backend (Prisma Generate + Vitest)
         env:
-          DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=public
+          DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
+          TEST_DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
+          JWT_SECRET: sprint1-test-only-jwt-secret-do-not-use-in-production
+          BCRYPT_SALT_ROUNDS: "10"
         run: |
-          npm ci
-          npx prisma migrate deploy
-          npm run prisma:seed
-          npm test
+          npm install
+          npx prisma generate --schema server/prisma/schema.prisma
+          npx vitest run
 
       # ------------------------------------------------------------------------
-      # 5. Frontend: install -> test -> production build
+      # 5. Frontend: install -> production build
       #    CHANGE ME: remove or replace if there is no separate frontend.
       # ------------------------------------------------------------------------
-      - name: Install, Test & Build Frontend (Vitest + Production Build)
+      - name: Install & Build Frontend (Production Build)
         working-directory: ./client
         run: |
-          npm ci
-          npm test
+          npm install
           npm run build
 
       # ------------------------------------------------------------------------

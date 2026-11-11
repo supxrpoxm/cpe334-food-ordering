@@ -1,9 +1,10 @@
 ##############################################################################
 # CI — Staging
 ##############################################################################
-# Runs on pushes / pull requests to `staging` and on demand.
-# Installs the root backend dependencies, generates the Prisma client, and
-# runs the Vitest backend suite against a throw-away PostgreSQL service.
+# Runs on pushes to `staging`, pull requests targeting `staging` or `main`,
+# and on demand. Installs the root backend dependencies, generates the Prisma
+# client, and runs the Vitest backend suite against a throw-away PostgreSQL
+# service.
 ##############################################################################
 
 name: CI - Staging
@@ -12,7 +13,7 @@ on:
   push:
     branches: [staging]
   pull_request:
-    branches: [staging]
+    branches: [staging, main]
   workflow_dispatch:
 
 permissions:
@@ -95,7 +96,7 @@ jobs:
 
       - name: Install client dependencies
         working-directory: ./client
-        run: npm ci
+        run: npm install
 
       - name: Build client
         working-directory: ./client
