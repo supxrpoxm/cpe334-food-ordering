@@ -37,17 +37,17 @@
 # ##############################################################################
 
 # ============================================================================
-# Stage 1: Build Frontend (React + TypeScript + Vite)
+# Stage 1: Build Frontend (Next.js)
 # ============================================================================
 # CHANGE ME: replace with your frontend toolchain (delete the stage if none).
 FROM node:24-alpine AS client-builder
 WORKDIR /app/client
-# Copy package files first so `npm ci` is cached until dependencies change.
+# Copy package files first so installs are cached until dependencies change.
 COPY client/package*.json ./
-RUN npm ci
+RUN npm install
 COPY client/ ./
-# Empty API URL => the SPA calls the API on the same origin (same container).
-ENV VITE_API_URL=""
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV API_ORIGIN=http://localhost:3001
 RUN npm run build
 
 # ============================================================================
@@ -59,7 +59,7 @@ WORKDIR /app/server
 # Prisma needs openssl on alpine.
 RUN apk add --no-cache openssl
 COPY server/package*.json ./
-RUN npm ci
+RUN npm install
 COPY server/ ./
 # CHANGE ME: `prisma generate` is Prisma-specific; drop it for other ORMs.
 RUN npx prisma generate && npm run build
@@ -79,8 +79,8 @@ COPY --from=server-builder /app/server/dist ./dist
 COPY --from=server-builder /app/server/src ./src
 COPY --from=server-builder /app/server/prisma ./prisma
 COPY --from=server-builder /app/server/docker-entrypoint.sh ./docker-entrypoint.sh
-# The built SPA is served by the Express server from /app/client/dist.
-COPY --from=client-builder /app/client/dist /app/client/dist
+# Next.js build output (the production frontend artifact).
+COPY --from=client-builder /app/client/.next /app/client/.next
 
 RUN chmod +x ./docker-entrypoint.sh
 
