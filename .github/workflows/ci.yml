@@ -1,0 +1,103 @@
+##############################################################################
+# CI — Staging
+##############################################################################
+# Runs on pushes to `staging`, pull requests targeting `staging` or `main`,
+# and on demand. Installs the root backend dependencies, generates the Prisma
+# client, and runs the Vitest backend suite against a throw-away PostgreSQL
+# service.
+##############################################################################
+
+name: CI - Staging
+
+on:
+  push:
+    branches: [staging]
+  pull_request:
+    branches: [staging, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend tests (Vitest + Prisma)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: toktickit
+          POSTGRES_PASSWORD: toktickit
+          POSTGRES_DB: toktickit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
+      TEST_DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
+      JWT_SECRET: sprint1-test-only-jwt-secret-do-not-use-in-production
+      BCRYPT_SALT_ROUNDS: "10"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema server/prisma/schema.prisma
+
+      - name: Run backend tests
+        run: npx vitest run
+
+  client-build:
+    name: Client build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: ./client
+        run: npm install
+
+      - name: Build client
+        working-directory: ./client
+        run: npm run build

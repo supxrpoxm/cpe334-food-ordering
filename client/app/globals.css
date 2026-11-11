@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #f7f5f1; color: #292524; font-size: 18px; line-height: 1.6; }
+button, input, select { font: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid #a16207; outline-offset: 3px; }
