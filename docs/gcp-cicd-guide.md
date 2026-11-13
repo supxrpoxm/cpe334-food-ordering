@@ -43,7 +43,7 @@ curl --fail http://localhost:3000/api/ready
 
 Open the UI at `http://localhost:5173` and sign in with the seed accounts for this environment.
 
-Compose has fallback passwords and turns on the demo seed for practice on localhost. Never use this file to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
+Copy the root `.env.example` to `.env` and replace both password placeholders with unique local values before starting Compose. Never use local values to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
 
 ### Option B: Node.js with the UI and API separate
 
@@ -97,7 +97,7 @@ Points to know about the script before you run it for real:
 - The first deploy from `deploy.sh` tags the image `latest`. Releases from `deploy.yml` tag it with the commit SHA, so roll back only to SHA tags.
 - The runtime service account gets Secret Manager Secret Accessor only on this app's secrets, not on the whole project. Keep it that way when you add secrets.
 - `--allow-unauthenticated` makes the HTTP endpoint public. Check the app's own authentication and your organization's policy first.
-- The demo seed is off by default. `--demo` loads sample data only when the database is empty, with a generated password stored in Secret Manager. Demo accounts are allowed in your project because Lab 6 UAT needs them, but their passwords must never be in code or shown on screen.
+- The administrator and catalog are seeded on every migration run; records are only created when missing, so reruns do not reset existing users, product prices, or stock. `--demo` additionally creates the demo customer with a generated password stored in Secret Manager. Demo accounts are allowed in your project because Lab 6 UAT needs them, but their passwords must never be in code or shown on screen.
 - Cloud SQL costs money for as long as it exists. Check the price for your configuration and region.
 
 Once these are clear, run the deploy and record who ran it, the time, the commit, the image digest, the migration execution, and the revision you got.
@@ -142,7 +142,7 @@ PROJECT_ID=YOUR_PROJECT_ID bash deploy/deploy.sh
 
 This creates paid resources, stores passwords in Secret Manager, and opens a public HTTP endpoint. Do not run it while the Free Trial is still pending.
 
-Open the URL you get, check health and readiness, open Secret Manager on your own to see the initial password, sign in and change it, test the main flow with your team, and record the real results.
+Open the URL you get, check health and readiness, and sign in with the initial admin password from Secret Manager. The app does not currently have user-management or password-change screens; keep the generated credential managed in Secret Manager and do not share it. Test the main flow with your team and record the real results.
 
 ### Part C: add CD once Part B works
 
@@ -152,7 +152,7 @@ Automate the same build, migration, and deploy sequence in the pipeline. Set up 
 
 - Health passes and readiness connects to the database, on both the authenticated and the public URL.
 - The UI loads and the API works from the public Cloud Run URL without localhost.
-- Each role can sign in through the browser, and a forced password change works.
+- The seeded administrator can sign in through the browser. The app has no user-management flow for administrators to assign default passwords to new users.
 - A requester can create a ticket and open My Tickets and the ticket details, and ticket ownership is enforced by the API.
 - IT staff can choose an owner, record actions taken, and resolve and close a ticket.
 - Dashboard counts and permission boundaries are correct for every role.
@@ -171,7 +171,7 @@ End-to-end specs exist in `e2e/`, but there is no root package manifest or Playw
 | Health passes but readiness fails | Check database connectivity, the secret mapping, and the migration logs. Do not copy secret values. |
 | The migration job fails | Check the job execution and its logs. The script stops with an error before it deploys the service. |
 | The deploy is refused | Read the IAM, quota, or organization policy error first. Do not add broad permissions to experiment. |
-| End-to-end login fails | Check the seed mode, the test account, and mustChangePassword. Passwords in the specs do not work in the cloud. |
+| End-to-end login fails | Check the seed mode and the test account password from the environment's Secret Manager. Passwords in the specs do not work in the cloud. |
 
 `deploy/teardown.sh` deletes the database and the other resources. Before you run it, check the project and the list of resources, back up anything you must keep, and confirm the deletion. The script's "Teardown completed" message does not prove everything was deleted, because each command is allowed to fail. Check the remaining resources and billing afterwards.
 

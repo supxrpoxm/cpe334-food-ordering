@@ -118,7 +118,7 @@ curl --fail --show-error "$SERVICE_URL/api/health"
 curl --fail --show-error "$SERVICE_URL/api/ready"
 ```
 
-Open the Service URL in a browser. Open Secret Manager on your own to see the initial administrator password, sign in, change the password, and test the main flow of the app with your team. Never put a password in a guide, a screenshot, or a chat group.
+Open the Service URL in a browser. Retrieve the initial administrator password from Secret Manager, sign in, and test the main flow of the app with your team. The app does not currently have a password-change screen; keep the generated credential managed in Secret Manager and never put it in a guide, a screenshot, or a chat group.
 
 Passing health and readiness checks is not the same as passing an end-to-end test. Record the CLI, Console, and browser results separately.
 
