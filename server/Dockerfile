@@ -18,7 +18,7 @@ RUN apk add --no-cache openssl
 
 # --- Install dependencies (cached until package*.json changes) ----------------
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # --- Generate Prisma client ---------------------------------------------------
 # CHANGE ME: remove or replace if your stack does not use Prisma.
