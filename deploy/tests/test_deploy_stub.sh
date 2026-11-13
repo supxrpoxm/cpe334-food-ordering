@@ -117,6 +117,10 @@ for MODE in first_run rerun partial job-fail demo; do
     fi
   else
     grep -q '^run deploy ' "$GCLOUD_LOG"
+    grep -Fq 'Admin Email    : admin@example.com' "$TEST_STATE_DIR/output"
+    if grep -Eq 'john\.smith@example\.com|mustChangePassword' "$TEST_STATE_DIR/output"; then
+      echo 'FAIL: deploy output claims an unsupported admin account or password flow'; exit 1
+    fi
   fi
   if grep -q '^projects add-iam-policy-binding .*roles/secretmanager.secretAccessor' "$GCLOUD_LOG"; then
     echo 'FAIL: runtime has project-wide secret access'; exit 1

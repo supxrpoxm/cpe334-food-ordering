@@ -11,7 +11,7 @@ The application code (`client/`, `server/src/`, `server/prisma/`) is not include
 | `server/Dockerfile`, `client/Dockerfile`, `client/nginx.conf` | Used by `docker-compose.yml` for local runs: one image for the API, one for the web app served by nginx. |
 | `Dockerfile`, `.dockerignore` | Three-stage build. The React app is built and served by the Express API from one container on port 3000, running as the non-root `node` user. |
 | `docker-compose.yml` | Runs PostgreSQL, a migration/seed job, the API (`localhost:3000`) and the web app (`localhost:5173`) locally. |
-| `server/.env.example`, `client/.env.example` | Every environment variable the app reads, with placeholders only. Copy to `.env` locally and never commit `.env`. |
+| `.env.example`, `server/.env.example`, `client/.env.example` | Local-only environment examples with placeholders. Copy the root file to `.env` for Docker Compose and never commit `.env`. |
 | `server/docker-entrypoint.sh` | Starts the server and nothing else. Migrations run in a separate Cloud Run job. |
 | `.github/workflows/ci-docker.yml` | Runs on every Pull Request: PostgreSQL service, migrate and seed, backend and frontend tests, deploy script tests, Docker build. The job name `test-and-docker` is the required check for the ruleset. |
 | `.github/workflows/deploy.yml` | Runs on every merge into `main`: CI again, build and push the image tagged with the commit SHA, migration job, Cloud Run update, smoke test. Run it by hand with `image_tag` to roll back. |
@@ -31,6 +31,7 @@ The guides are in English. The TA team wrote them during their own rehearsal. Va
 
 0. Follow the Lab 5 Student Guide (the episode series from the TA team). This folder is the material it points to.
 1. Run your app locally in production mode, then with `docker compose up --build`.
+   For Docker Compose, copy `.env.example` to `.env` and replace both password placeholders with unique local values. The seed requires the admin password; it requires the demo password when `SEED_DEMO_DATA=true`.
 2. Make it cloud-ready: sessions and uploaded files in the database, no demo passwords in production, reference data and the first administrator created by the seed.
 3. Add `ci-docker.yml` and open a Pull Request to see the checks run.
 4. Confirm billing is open and create a budget alert. In Cloud Shell, run `DRY_RUN=1 PROJECT_ID=YOUR_PROJECT_ID bash deploy/deploy.sh`, read the output, then run it without `DRY_RUN`. The TA guides add `--demo`, which loads sample users with a generated password for teaching. Demo accounts are allowed in your project (you will need them for UAT in Lab 6), but their passwords must come from Secret Manager or environment variables, never from code, and must not be shown on screen.

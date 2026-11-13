@@ -29,8 +29,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER:-toktickit}:${POSTGRES_PASSWORD:-toktickit}@db:5432/${POSTGRES_DB:-toktickit}?schema=public
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminInitial123!}
-      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-DemoInitial123!}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
     command: ["sh", "-c", "npx prisma db push --schema prisma/schema.prisma && npm run prisma:seed"]
 
