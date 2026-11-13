@@ -29,10 +29,10 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER:-toktickit}:${POSTGRES_PASSWORD:-toktickit}@db:5432/${POSTGRES_DB:-toktickit}?schema=public
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin1234}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-user1234}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
-    command: ["sh", "-c", "npx prisma db push --schema prisma/schema.prisma && npm run prisma:seed"]
+    command: ["sh", "-c", "npx prisma db push --skip-generate --schema prisma/schema.prisma && npm run prisma:seed"]
 
   server:
     build:
@@ -58,6 +58,8 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://server:3000
     environment:
       API_ORIGIN: http://server:3000
     container_name: toktickit-client
@@ -65,7 +67,7 @@ services:
     depends_on:
       - server
     ports:
-      - "3000:3000"
+      - "3000:80"
 
 volumes:
   postgres_data:
