@@ -1,16 +1,15 @@
 # ##############################################################################
-# TokTickIT — Unified production Dockerfile (multi-stage)
+# CPE 334 Food Ordering — production Dockerfile (multi-stage)
 # ##############################################################################
 # WHAT THIS FILE DOES
-#   Builds ONE image that contains the API (Express) AND the built React SPA and
-#   serves both on port 3000. Cloud Run (and CI) build/run exactly this image.
-#   (client/Dockerfile and server/Dockerfile are separate, used only by
-#    docker-compose for local development.)
+#   Builds one production image with the Express API and Next.js frontend
+#   artifacts. Cloud Run and CI build this image. Docker Compose uses separate
+#   client and server containers for local development.
 #
 # STRUCTURE (3 stages)
-#   Stage 1  client-builder -> compiles the frontend (Vite)
+#   Stage 1  client-builder -> compiles the frontend (Next.js)
 #   Stage 2  server-builder -> compiles the backend (TypeScript + Prisma)
-#   Stage 3  production     -> small runtime image; copies only build output
+#   Stage 3  production     -> runtime image with the API and frontend build
 #
 # ⭐ IMPORTANT
 #   * The container MUST listen on $PORT (Cloud Run injects it; 3000 here) and
@@ -65,7 +64,7 @@ COPY server/ ./
 RUN npx prisma generate && npm run build
 
 # ============================================================================
-# Stage 3: Unified Production Runtime (Serves API + Built React SPA on :3000)
+# Stage 3: Production API Runtime (listens on :3000)
 # ============================================================================
 # ⭐ IMPORTANT: this is the stage that actually runs on Cloud Run.
 FROM node:24-alpine AS production

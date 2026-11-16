@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: toktickit-db
+    container_name: food-ordering-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-toktickit}
@@ -21,7 +21,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: toktickit-migrate
+    container_name: food-ordering-migrate
     restart: "no"
     depends_on:
       db:
@@ -38,7 +38,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: toktickit-server
+    container_name: food-ordering-server
     restart: unless-stopped
     depends_on:
       db:
@@ -62,7 +62,7 @@ services:
         NEXT_PUBLIC_API_URL: http://server:3000
     environment:
       API_ORIGIN: http://server:3000
-    container_name: toktickit-client
+    container_name: food-ordering-client
     restart: unless-stopped
     depends_on:
       - server
