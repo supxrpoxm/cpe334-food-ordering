@@ -1,6 +1,6 @@
-# GCP and CI/CD Guide for TokTickIT
+# GCP and CI/CD Guide for CPE 334 Food Ordering
 
-This guide explains how the TokTickIT reference is deployed to Google Cloud and released through GitHub Actions. The TA team verified it on 21 October 2026 (Asia/Bangkok). For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
+This guide explains how the CPE 334 Food Ordering application is deployed to Google Cloud and released through GitHub Actions. For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
 
 Account, billing, and credit status change over time. Check your own account and project before you use any value from this guide.
 
@@ -8,10 +8,10 @@ Account, billing, and credit status change over time. Check your own account and
 
 | Part | Technology and files |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Bootstrap; `client/` |
-| Backend | Express, TypeScript, Prisma 5; `server/` |
-| Database | PostgreSQL; Docker Compose uses PostgreSQL 16 |
-| Cloud container | `Dockerfile` at the root, UI and API in one container on port 3000, running as the non-root `node` user |
+| Frontend | Next.js 15, React 19, TypeScript; `client/` |
+| Backend | Express 4, TypeScript, Prisma 6; `server/` |
+| Database | PostgreSQL; Docker Compose and CI use PostgreSQL 16 |
+| Cloud container | Root `Dockerfile`; Next.js on Cloud Run `$PORT` (3000), Express API on internal `API_PORT` (3001), non-root `node` user |
 | Local environment | `docker-compose.yml`: database, migration and seed, backend, frontend |
 | Cloud setup | `deploy/deploy.sh`: Cloud Run, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Build, Secret Manager, runtime service account |
 | CI | `.github/workflows/ci-docker.yml` |
@@ -41,7 +41,7 @@ curl --fail http://localhost:3000/api/health
 curl --fail http://localhost:3000/api/ready
 ```
 
-Open the UI at `http://localhost:5173` and sign in with the seed accounts for this environment.
+Open the UI at `http://localhost:3000` and sign in with accounts seeded for this environment.
 
 Copy the root `.env.example` to `.env` and replace both password placeholders with unique local values before starting Compose. Never use local values to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
 

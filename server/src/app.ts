@@ -22,11 +22,16 @@ app.get('/', (_req, res) =>
   res.json({ status: 'ok', message: 'Backend is running' }),
 );
 
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.get('/api/ready', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ready', db: 'connected' });
-  } catch {
+  } catch (error) {
+    console.error('Database readiness check failed', error);
     res.status(503).json({ status: 'not_ready' });
   }
 });
