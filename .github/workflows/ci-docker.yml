@@ -3,7 +3,7 @@
 # ##############################################################################
 # WHAT THIS WORKFLOW DOES
 #   Runs the project's checks and is used in two ways:
-#     1) directly on every pull request to `main` (and manually), and
+#     1) directly on every pull request to `staging` or `main` (and manually), and
 #     2) as a REUSABLE workflow called by deploy.yml (`workflow_call`) so the
 #        deploy only starts after these checks pass.
 #   Steps: offline deploy-script tests -> backend tests (real PostgreSQL service)
@@ -34,13 +34,13 @@ name: CI & Docker Build
 # ------------------------------------------------------------------------------
 # Triggers
 #   workflow_call     : lets deploy.yml reuse this workflow (do not remove).
-#   pull_request/main : checks every PR before merge.
+#   pull_request      : checks every PR into staging or main before merge.
 #   workflow_dispatch : manual "Run workflow" button.
 # ------------------------------------------------------------------------------
 on:
   workflow_call:
   pull_request:
-    branches: [main]
+    branches: [staging, main]
   workflow_dispatch:
 
 # Least privilege: this workflow only needs to read the repository.
