@@ -10,7 +10,7 @@
 #   4. invalid tag    : rejected before any gcloud call
 # HOW TO RUN (repo root, needs bash):  bash deploy/tests/test_release_stub.sh
 #   Prints `PASS ...` lines; any failure exits non-zero. CI runs it too.
-# ⭐ CHANGE ME: if you rename the image path `toktickit/toktickit` or the job /
+# ⭐ CHANGE ME: if you rename the image path `food-ordering/food-ordering` or the job /
 #    service names in deploy/release.sh, update the stub strings below.
 # ==============================================================================
 set -euo pipefail
@@ -27,7 +27,7 @@ echo "$*" >> "$CALL_LOG"
 case "$*" in
   'artifacts docker images describe '*)
     [[ "${FAIL_AT:-}" != image ]] || exit 1
-    echo 'asia-southeast1-docker.pkg.dev/release-test/toktickit/toktickit@sha256:abcdef' ;;
+    echo 'asia-southeast1-docker.pkg.dev/release-test/food-ordering/food-ordering@sha256:abcdef' ;;
   'run jobs execute '*) [[ "${FAIL_AT:-}" != migration ]] || exit 1 ;;
   'run services describe '*) echo 'https://demo.example.test' ;;
 esac

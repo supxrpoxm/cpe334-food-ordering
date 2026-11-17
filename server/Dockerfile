@@ -1,5 +1,5 @@
 # ==============================================================================
-# TokTickIT — Backend Dockerfile for local Docker Compose (server + migrate)
+# CPE 334 Food Ordering — backend Dockerfile for Docker Compose (server + migrate)
 # ==============================================================================
 # Used by docker-compose.yml (`server` and `migrate` services).
 # Cloud Run does NOT use this file — Cloud Run uses the root `Dockerfile`.
@@ -18,7 +18,7 @@ RUN apk add --no-cache openssl
 
 # --- Install dependencies (cached until package*.json changes) ----------------
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # --- Generate Prisma client ---------------------------------------------------
 # CHANGE ME: remove or replace if your stack does not use Prisma.

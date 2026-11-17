@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# TokTickIT — Idempotent Google Cloud Run Deployment Script
+# CPE 334 Food Ordering — Google Cloud Run Deployment
 # ==============================================================================
 # Usage:
 #   ./deploy/deploy.sh [--demo]
@@ -99,34 +99,31 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# Resource names
-# ⚠️ The lab guide refers to these names (toktickit, toktickit-pg,
-#    toktickit-runner, ...) and deploy.yml / release.sh / teardown.sh use the
-#    same ones. Keep them unless the guide says otherwise.
-# CHANGE ME: rename only if your group uses its own naming (then rename it in
-#            deploy.yml, release.sh, teardown.sh and the tests too).
+# Resource names shared with deploy/release.sh, deploy/teardown.sh,
+# .github/workflows/deploy.yml, and the offline tests.
 # ------------------------------------------------------------------------------
-REPO_NAME="toktickit"
-SQL_INSTANCE="toktickit-pg"
-DB_NAME="toktickit"
-DB_USER="toktickit"
-SERVICE_NAME="toktickit"
-MIGRATE_JOB_NAME="toktickit-migrate"
-SA_NAME="toktickit-runner"
+REPO_NAME="food-ordering"
+SQL_INSTANCE="food-ordering-db"
+DB_NAME="food_ordering"
+DB_USER="food_ordering"
+SERVICE_NAME="food-ordering"
+MIGRATE_JOB_NAME="food-ordering-migrate"
+SA_NAME="food-ordering-runner"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 SQL_CONN_NAME="${PROJECT_ID}:${REGION}:${SQL_INSTANCE}"
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}:latest"
 
 # Secret Manager secret names (values are never stored in this repo).
-SECRET_DB_URL="toktickit-database-url"
-SECRET_ADMIN_PASS="toktickit-admin-password"
-SECRET_DEMO_PASS="toktickit-demo-password"
+SECRET_DB_URL="food-ordering-database-url"
+SECRET_ADMIN_PASS="food-ordering-admin-password"
+SECRET_JWT_SECRET="food-ordering-jwt-secret"
+SECRET_DEMO_PASS="food-ordering-demo-password"
 
 GENERATED_ADMIN_PASSWORD=""
 GENERATED_DEMO_PASSWORD=""
 
 echo "=================================================================="
-echo "TokTickIT Cloud Run Deployment"
+echo "CPE 334 Food Ordering Cloud Run Deployment"
 echo "Project : ${PROJECT_ID}"
 echo "Region  : ${REGION}"
 echo "Demo    : ${SEED_DEMO_DATA}"
@@ -151,13 +148,13 @@ run_cmd gcloud services enable \
 # ==============================================================================
 if [ "$DRY_RUN" = "1" ]; then
   run_cmd gcloud artifacts repositories describe "$REPO_NAME" --location "$REGION" --project "$PROJECT_ID"
-  run_cmd gcloud artifacts repositories create "$REPO_NAME" --repository-format=docker --location "$REGION" --description="TokTickIT container repository" --project "$PROJECT_ID"
+  run_cmd gcloud artifacts repositories create "$REPO_NAME" --repository-format=docker --location "$REGION" --description="CPE 334 Food Ordering container repository" --project "$PROJECT_ID"
 else
   if ! gcloud artifacts repositories describe "$REPO_NAME" --location "$REGION" --project "$PROJECT_ID" >/dev/null 2>&1; then
     run_cmd gcloud artifacts repositories create "$REPO_NAME" \
       --repository-format=docker \
       --location "$REGION" \
-      --description="TokTickIT container repository" \
+      --description="CPE 334 Food Ordering container repository" \
       --project "$PROJECT_ID"
   fi
 fi
@@ -207,11 +204,11 @@ fi
 # ==============================================================================
 if [ "$DRY_RUN" = "1" ]; then
   run_cmd gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID"
-  run_cmd gcloud iam service-accounts create "$SA_NAME" --display-name="TokTickIT Cloud Run Service Account" --project "$PROJECT_ID"
+  run_cmd gcloud iam service-accounts create "$SA_NAME" --display-name="Food Ordering Cloud Run Service Account" --project "$PROJECT_ID"
 else
   if ! gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" >/dev/null 2>&1; then
     run_cmd gcloud iam service-accounts create "$SA_NAME" \
-      --display-name="TokTickIT Cloud Run Service Account" \
+      --display-name="Food Ordering Cloud Run Service Account" \
       --project "$PROJECT_ID"
   fi
 fi
@@ -266,7 +263,22 @@ else
 fi
 
 # ==============================================================================
-# 8. Optional Demo Password in Secret Manager when --demo is passed
+# 8. Create JWT_SECRET in Secret Manager (only if it does not exist yet)
+# ==============================================================================
+if [ "$DRY_RUN" = "1" ]; then
+  run_cmd gcloud secrets describe "$SECRET_JWT_SECRET" --project "$PROJECT_ID"
+  run_cmd gcloud secrets create "$SECRET_JWT_SECRET" --replication-policy="automatic" --project "$PROJECT_ID"
+  run_cmd gcloud secrets versions add "$SECRET_JWT_SECRET" --data-file=- --project "$PROJECT_ID"
+else
+  if ! gcloud secrets describe "$SECRET_JWT_SECRET" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    GENERATED_JWT_SECRET="$(openssl rand -hex 32)"
+    run_cmd gcloud secrets create "$SECRET_JWT_SECRET" --replication-policy="automatic" --project "$PROJECT_ID"
+    printf "%s" "$GENERATED_JWT_SECRET" | gcloud secrets versions add "$SECRET_JWT_SECRET" --data-file=- --project "$PROJECT_ID"
+  fi
+fi
+
+# ==============================================================================
+# 9. Optional Demo Password in Secret Manager when --demo is passed
 #    Only used to seed demo users (./deploy/deploy.sh --demo).
 # ==============================================================================
 JOB_SECRETS="DATABASE_URL=${SECRET_DB_URL}:latest,ADMIN_PASSWORD=${SECRET_ADMIN_PASS}:latest"
@@ -291,7 +303,7 @@ fi
 #    binding is added — keep access limited to this app's own secrets.
 # ------------------------------------------------------------------------------
 # Grant access only to this app's secrets, after they exist.
-RUNTIME_SECRETS=("$SECRET_DB_URL" "$SECRET_ADMIN_PASS")
+RUNTIME_SECRETS=("$SECRET_DB_URL" "$SECRET_ADMIN_PASS" "$SECRET_JWT_SECRET")
 if [ "$SEED_DEMO_DATA" = "true" ]; then
   RUNTIME_SECRETS+=("$SECRET_DEMO_PASS")
 fi
@@ -303,7 +315,7 @@ for secret in "${RUNTIME_SECRETS[@]}"; do
 done
 
 # ==============================================================================
-# 9. Build & Push Unified Container Image via Cloud Build
+# 10. Build & Push Production Container Image via Cloud Build
 #    Builds the root Dockerfile (run this script from the repo root).
 #    Tag `latest` is only for this first manual setup; deploy.yml uses commit SHAs.
 # ==============================================================================
@@ -312,12 +324,10 @@ run_cmd gcloud builds submit \
   --project "$PROJECT_ID"
 
 # ==============================================================================
-# 10. Create/Update & Execute Cloud Run Job for Migration + Non-destructive Seed
+# 11. Create/Update & Execute Cloud Run Job for Migration + Idempotent Seed
 #     ⭐ IMPORTANT: if this job fails the script stops BEFORE deploying the
 #        service, so a broken migration never reaches users.
-#     CHANGE ME: `--args` (prisma migrate deploy && npm run prisma:seed) is
-#        Prisma/npm specific — use your stack's migrate/seed command.
-#     deploy.yml / release.sh later re-run this same job (name: toktickit-migrate).
+#     deploy.yml / release.sh later update this job (name: food-ordering-migrate).
 # ==============================================================================
 run_cmd gcloud run jobs deploy "$MIGRATE_JOB_NAME" \
   --image "$IMAGE_URI" \
@@ -327,7 +337,7 @@ run_cmd gcloud run jobs deploy "$MIGRATE_JOB_NAME" \
   --set-secrets "$JOB_SECRETS" \
   --set-env-vars "NODE_ENV=production,TZ=Asia/Bangkok,SEED_DEMO_DATA=${SEED_DEMO_DATA}" \
   --command "sh" \
-  --args "-c,npx prisma migrate deploy && npm run prisma:seed" \
+  --args "-c,cd /app/server && npx prisma migrate deploy --schema prisma/schema.prisma && npm run prisma:seed" \
   --max-retries 1 \
   --task-timeout 300s \
   --project "$PROJECT_ID"
@@ -343,7 +353,7 @@ if ! run_cmd gcloud run jobs execute "$MIGRATE_JOB_NAME" \
 fi
 
 # ==============================================================================
-# 11. Deploy Cloud Run Service
+# 12. Deploy Cloud Run Service
 #     CHANGE ME: --port must equal the port in the Dockerfile (3000); tune
 #                --memory / --cpu / --max-instances for your app.
 #     ⚠️ --allow-unauthenticated makes the service public (needed for the demo).
@@ -355,7 +365,7 @@ run_cmd gcloud run deploy "$SERVICE_NAME" \
   --allow-unauthenticated \
   --service-account "$SA_EMAIL" \
   --add-cloudsql-instances "$SQL_CONN_NAME" \
-  --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest" \
+  --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest,JWT_SECRET=${SECRET_JWT_SECRET}:latest" \
   --set-env-vars "NODE_ENV=production,TZ=Asia/Bangkok" \
   --min-instances 0 \
   --max-instances 3 \
@@ -379,7 +389,7 @@ printf '%s\n' "Deployment Completed!"
 printf '%s\n' "Service URL    : ${SERVICE_URL}"
 printf '%s\n' "Health Check   : ${SERVICE_URL}/api/health"
 printf '%s\n' "Readiness Check: ${SERVICE_URL}/api/ready"
-printf '%s\n' "Admin Email    : john.smith@example.com (mustChangePassword: true)"
+printf '%s\n' "Admin Email    : admin@example.com"
 printf '%s\n' "Admin Password : Stored in Secret Manager: ${SECRET_ADMIN_PASS} (not printed)."
 if [ "$SEED_DEMO_DATA" = "true" ]; then
   printf '%s\n' "Demo Password  : Stored in Secret Manager: ${SECRET_DEMO_PASS} (not printed)."
