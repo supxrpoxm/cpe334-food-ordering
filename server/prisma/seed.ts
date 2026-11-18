@@ -22,17 +22,13 @@ const catalog = [
 
 async function seed(): Promise<void> {
   const seedDemoData = process.env.SEED_DEMO_DATA === 'true' || process.env.NODE_ENV !== 'production';
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword || adminPassword.trim() === '') {
-    throw new Error('ADMIN_PASSWORD is required to seed the administrator.');
+  if (!seedDemoData) {
+    console.log('Demo seed is disabled; set SEED_DEMO_DATA=true to load the local catalog and test accounts.');
+    return;
   }
 
-  let demoUserPassword: string | undefined;
-  if (seedDemoData) {
-    demoUserPassword = process.env.DEMO_USER_PASSWORD;
-    if (!demoUserPassword || demoUserPassword.trim() === '') {
-      throw new Error('DEMO_USER_PASSWORD is required when SEED_DEMO_DATA is enabled.');
-    }
+  if (process.env.NODE_ENV === 'production' && (!process.env.ADMIN_PASSWORD || !process.env.DEMO_USER_PASSWORD)) {
+    throw new Error('ADMIN_PASSWORD and DEMO_USER_PASSWORD are required when seeding demo accounts in production.');
   }
 
   for (const entry of catalog) {
@@ -45,35 +41,27 @@ async function seed(): Promise<void> {
     for (const product of entry.products) {
       await prisma.product.upsert({
         where: { id: product.id },
-        update: {},
+        update: { ...product, categoryId: category.id, isActive: true },
         create: { ...product, categoryId: category.id },
       });
     }
   }
 
   const accounts = [
-    { email: 'admin@example.com', name: 'Demo Administrator', role: Role.ADMIN, password: adminPassword },
+    { email: 'customer@example.com', name: 'Demo Customer', role: Role.CUSTOMER, password: process.env.DEMO_USER_PASSWORD || 'TestPassword123!' },
+    { email: 'admin@example.com', name: 'Demo Administrator', role: Role.ADMIN, password: process.env.ADMIN_PASSWORD || 'AdminTest123!' },
   ];
-
-  if (demoUserPassword) {
-    accounts.push({
-      email: 'customer@example.com',
-      name: 'Demo Customer',
-      role: Role.CUSTOMER,
-      password: demoUserPassword,
-    });
-  }
 
   for (const account of accounts) {
     const passwordHash = await bcrypt.hash(account.password, saltRounds);
     await prisma.user.upsert({
       where: { email: account.email },
-      update: {},
+      update: { name: account.name, role: account.role, passwordHash },
       create: { email: account.email, name: account.name, role: account.role, passwordHash },
     });
   }
 
-  console.log(`Seeded ${catalog.reduce((count, item) => count + item.products.length, 0)} menu items and ${accounts.length} accounts.`);
+  console.log(`Seeded ${catalog.reduce((count, item) => count + item.products.length, 0)} menu items and ${accounts.length} test accounts.`);
 }
 
 seed()

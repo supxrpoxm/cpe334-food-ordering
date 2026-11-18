@@ -44,7 +44,7 @@
 #   - Concurrency: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs
 #
 # ⭐ CHANGE ME — groups using another tech stack must edit (marked below):
-#   # Resource names match deploy/deploy.sh and deploy/release.sh.
+#   # CHANGE ME: SERVICE_NAME / MIGRATE_JOB_NAME / image path (toktickit)
 #   # CHANGE ME: build step if your image is not built from the root Dockerfile
 #   # CHANGE ME: Python setup + smoke test if you use another smoke test
 # ##############################################################################
@@ -107,8 +107,8 @@ jobs:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
       # CHANGE ME: names of your Cloud Run service and migration job.
-      SERVICE_NAME: food-ordering
-      MIGRATE_JOB_NAME: food-ordering-migrate
+      SERVICE_NAME: toktickit
+      MIGRATE_JOB_NAME: toktickit-migrate
       # Image tag = commit SHA (or the rollback SHA that was typed in).
       IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
       ROLLBACK: ${{ inputs.image_tag != '' }}
@@ -146,14 +146,14 @@ jobs:
 
       # ------------------------------------------------------------------------
       # 4. Build and push the image (skipped for rollbacks)
-      #     Image path `.../food-ordering/food-ordering` must match the
+      #    CHANGE ME: image path `.../toktickit/toktickit` must match the
       #    Artifact Registry repo and service names (see deploy/release.sh).
       # ------------------------------------------------------------------------
       - name: Build and push image
         if: env.ROLLBACK != 'true'
         run: |
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/food-ordering/food-ordering:$IMAGE_TAG"
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/toktickit/toktickit:$IMAGE_TAG"
           docker build --tag "$IMAGE" .
           docker push "$IMAGE"
 
@@ -187,11 +187,11 @@ jobs:
       - name: Record deployment
         run: |
           {
-            echo '### CPE 334 Food Ordering deployment'
+            echo '### TokTickIT demo deployment'
             echo "- Commit image tag: \`$IMAGE_TAG\`"
             echo "- Digest: \`$DEPLOYED_IMAGE\`"
             echo "- Rollback: $ROLLBACK"
             echo "- URL: $SERVICE_URL"
-            echo '- Smoke test: passed (health, readiness/DB, frontend, products API).'
+            echo '- Smoke test: passed (health, readiness/DB, HTML, categories).'
             echo '- See smoke step for optional login check status.'
           } >> "$GITHUB_STEP_SUMMARY"

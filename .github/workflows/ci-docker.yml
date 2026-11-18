@@ -3,7 +3,7 @@
 # ##############################################################################
 # WHAT THIS WORKFLOW DOES
 #   Runs the project's checks and is used in two ways:
-#     1) directly on every pull request to `main` (and manually), and
+#     1) directly on every pull request to `staging` or `main` (and manually), and
 #     2) as a REUSABLE workflow called by deploy.yml (`workflow_call`) so the
 #        deploy only starts after these checks pass.
 #   Steps: offline deploy-script tests -> backend tests (real PostgreSQL service)
@@ -34,13 +34,13 @@ name: CI & Docker Build
 # ------------------------------------------------------------------------------
 # Triggers
 #   workflow_call     : lets deploy.yml reuse this workflow (do not remove).
-#   pull_request/main : checks every PR before merge.
+#   pull_request      : checks every PR into staging or main before merge.
 #   workflow_dispatch : manual "Run workflow" button.
 # ------------------------------------------------------------------------------
 on:
   workflow_call:
   pull_request:
-    branches: [main]
+    branches: [staging, main]
   workflow_dispatch:
 
 # Least privilege: this workflow only needs to read the repository.
@@ -66,9 +66,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: food_ordering
-          POSTGRES_PASSWORD: food_ordering
-          POSTGRES_DB: food_ordering
+          POSTGRES_USER: toktickit
+          POSTGRES_PASSWORD: toktickit
+          POSTGRES_DB: toktickit
         ports:
           - 5432:5432
         # Wait until the DB is healthy before the steps start.
@@ -124,8 +124,8 @@ jobs:
       # ------------------------------------------------------------------------
       - name: Install & Test Backend (Prisma Generate + Vitest)
         env:
-          DATABASE_URL: postgresql://food_ordering:food_ordering@localhost:5432/food_ordering?schema=test
-          TEST_DATABASE_URL: postgresql://food_ordering:food_ordering@localhost:5432/food_ordering?schema=test
+          DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
+          TEST_DATABASE_URL: postgresql://toktickit:toktickit@localhost:5432/toktickit?schema=test
           JWT_SECRET: sprint1-test-only-jwt-secret-do-not-use-in-production
           BCRYPT_SALT_ROUNDS: "10"
         run: |
@@ -149,4 +149,4 @@ jobs:
       # ------------------------------------------------------------------------
       - name: Verify Unified Production Dockerfile Build
         run: |
-          docker build -t food-ordering-ci:latest .
+          docker build -t toktickit-lab4:latest .

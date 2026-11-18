@@ -66,11 +66,11 @@ Add `--demo` to load sample users. Their password is generated and stored in Sec
 
 | Name | What it is for | Where to check it in the Console after the deploy |
 |---|---|---|
-| `food-ordering` in Artifact Registry | Stores the container image | Artifact Registry > Repositories |
-| `food-ordering-db` | PostgreSQL database | SQL > Instances |
-| `food-ordering-database-url` | Stores the database connection string | Secret Manager |
-| `food-ordering-migrate` | Runs migrations and the seed | Cloud Run > Jobs |
-| `food-ordering` in Cloud Run | Runs the website and API | Cloud Run > Services |
+| `toktickit` in Artifact Registry | Stores the container image | Artifact Registry > Repositories |
+| `toktickit-pg` | PostgreSQL database | SQL > Instances |
+| `toktickit-database-url` | Stores the database connection string | Secret Manager |
+| `toktickit-migrate` | Runs migrations and the seed | Cloud Run > Jobs |
+| `toktickit` in Cloud Run | Runs the website and API | Cloud Run > Services |
 
 After a dry run, none of these exist yet. The "Deployment Completed!" message in a dry run is simulated. It does not prove a deploy worked, and it does not check billing, IAM, or quota.
 
@@ -94,7 +94,7 @@ If an error appears, stop and read it. Do not run the command again right away, 
 
 ## 6. Check the deployed website
 
-The deployed service opens at the Cloud Run Service URL; the application is the CPE 334 Food Ordering site.
+In the TA rehearsal, the service opened directly at a URL like `https://toktickit-xxxxxxxxxx-as.a.run.app`, with no proxy or localhost, but you still sign in to TokTickIT.
 
 If your organization restricts `allUsers`, read the policy first:
 
@@ -105,10 +105,10 @@ gcloud org-policies describe constraints/run.managed.requireInvokerIam --effecti
 In the rehearsal the Organization Policy API was enabled to read the policy, and the effective value was `enforce: false`. Public access was then turned on for that one service, following [Google's guidance](https://docs.cloud.google.com/run/docs/authenticating/public):
 
 ```bash
-gcloud run services update food-ordering --no-invoker-iam-check --project="$PROJECT_ID" --region=asia-southeast1
+gcloud run services update toktickit --no-invoker-iam-check --project="$PROJECT_ID" --region=asia-southeast1
 ```
 
-In the Console: Cloud Run > food-ordering > Security > Allow public access, then save. This lets anyone reach the service endpoint. To close it again, run the same command with `--invoker-iam-check` or untick the setting. Removing `allUsers` from IAM does not close a service that was opened this way. If the policy enforces IAM, ask a TA before you change anything.
+In the Console: Cloud Run > toktickit > Security > Allow public access, then save. This lets anyone reach the service endpoint. To close it again, run the same command with `--invoker-iam-check` or untick the setting. Removing `allUsers` from IAM does not close a service that was opened this way. If the policy enforces IAM, ask a TA before you change anything. The rehearsal did not change any organization policy.
 
 Copy the Service URL you got and set it as a variable. Replace the text in quotes with your URL:
 
@@ -118,7 +118,7 @@ curl --fail --show-error "$SERVICE_URL/api/health"
 curl --fail --show-error "$SERVICE_URL/api/ready"
 ```
 
-Open the Service URL in a browser. Retrieve the initial administrator password from Secret Manager, sign in, and test the main flow of the app with your team. The app does not currently have a password-change screen; keep the generated credential managed in Secret Manager and never put it in a guide, a screenshot, or a chat group.
+Open the Service URL in a browser. Open Secret Manager on your own to see the initial administrator password, sign in, change the password, and test the main flow of the app with your team. Never put a password in a guide, a screenshot, or a chat group.
 
 Passing health and readiness checks is not the same as passing an end-to-end test. Record the CLI, Console, and browser results separately.
 
