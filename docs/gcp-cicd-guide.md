@@ -45,6 +45,8 @@ Open the UI at `http://localhost:5173` and sign in with the seed accounts for th
 
 Compose has fallback passwords and turns on the demo seed for practice on localhost. Never use this file to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
 
+On an existing local Compose volume, changing `POSTGRES_USER` or `POSTGRES_DB` does not rename the initialized role or database. Back up and migrate existing data before recreating the app with the new settings; do not remove the volume unless its data is disposable.
+
 ### Option B: Node.js with the UI and API separate
 
 Prepare a PostgreSQL database and set `DATABASE_URL` in `server/.env` to match it. Then use two terminals:
