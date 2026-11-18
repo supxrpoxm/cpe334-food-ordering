@@ -1,5 +1,5 @@
 const DEFAULT_TEST_DATABASE_URL =
-  'postgresql://toktickit:toktickit@localhost:5433/toktickit?schema=test';
+  'postgresql://food_ordering:food_ordering@localhost:5433/food_ordering?schema=test';
 
 process.env.NODE_ENV = 'test';
 process.env.TZ = process.env.TZ ?? 'Asia/Bangkok';

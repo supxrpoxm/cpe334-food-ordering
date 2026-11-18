@@ -1,6 +1,6 @@
-# GCP and CI/CD Guide for TokTickIT
+# GCP and CI/CD Guide for CPE 334 Food Ordering
 
-This guide explains how the TokTickIT reference is deployed to Google Cloud and released through GitHub Actions. The TA team verified it on 21 October 2026 (Asia/Bangkok). For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
+This guide explains how the CPE 334 Food Ordering application is deployed to Google Cloud and released through GitHub Actions. For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
 
 Account, billing, and credit status change over time. Check your own account and project before you use any value from this guide.
 
@@ -44,6 +44,8 @@ curl --fail http://localhost:3000/api/ready
 Open the UI at `http://localhost:5173` and sign in with the seed accounts for this environment.
 
 Compose has fallback passwords and turns on the demo seed for practice on localhost. Never use this file to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
+
+On an existing local Compose volume, changing `POSTGRES_USER` or `POSTGRES_DB` does not rename the initialized role or database. Back up and migrate existing data before recreating the app with the new settings; do not remove the volume unless its data is disposable.
 
 ### Option B: Node.js with the UI and API separate
 
