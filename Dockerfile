@@ -1,14 +1,14 @@
 # ##############################################################################
-# TokTickIT — Unified production Dockerfile (multi-stage)
+# CPE 334 Food Ordering — Unified production Dockerfile (multi-stage)
 # ##############################################################################
 # WHAT THIS FILE DOES
-#   Builds ONE image that contains the API (Express) AND the built React SPA and
-#   serves both on port 3000. Cloud Run (and CI) build/run exactly this image.
+#   Builds ONE image containing the Express API and Next.js frontend.
+#   Next.js serves port 3000 and rewrites /api requests to the API on port 3001.
 #   (client/Dockerfile and server/Dockerfile are separate, used only by
 #    docker-compose for local development.)
 #
 # STRUCTURE (3 stages)
-#   Stage 1  client-builder -> compiles the frontend (Vite)
+#   Stage 1  client-builder -> compiles the frontend (Next.js standalone)
 #   Stage 2  server-builder -> compiles the backend (TypeScript + Prisma)
 #   Stage 3  production     -> small runtime image; copies only build output
 #
@@ -47,7 +47,7 @@ COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV API_ORIGIN=http://localhost:3001
+ENV API_ORIGIN=http://127.0.0.1:3001
 RUN npm run build
 
 # ============================================================================
@@ -65,7 +65,7 @@ COPY server/ ./
 RUN npx prisma generate && npm run build
 
 # ============================================================================
-# Stage 3: Unified Production Runtime (Serves API + Built React SPA on :3000)
+# Stage 3: Unified Production Runtime
 # ============================================================================
 # ⭐ IMPORTANT: this is the stage that actually runs on Cloud Run.
 FROM node:24-alpine AS production
@@ -76,25 +76,20 @@ RUN apk add --no-cache openssl
 COPY --from=server-builder /app/server/package*.json ./
 COPY --from=server-builder /app/server/node_modules ./node_modules
 COPY --from=server-builder /app/server/dist ./dist
-COPY --from=server-builder /app/server/src ./src
 COPY --from=server-builder /app/server/prisma ./prisma
-COPY --from=server-builder /app/server/docker-entrypoint.sh ./docker-entrypoint.sh
-# Next.js build output (the production frontend artifact).
-COPY --from=client-builder /app/client/.next /app/client/.next
-
-RUN chmod +x ./docker-entrypoint.sh
+COPY --from=server-builder /app/server/container-entrypoint.cjs ./container-entrypoint.cjs
+COPY --from=client-builder /app/client/.next/standalone /app/client
+COPY --from=client-builder /app/client/.next/static /app/client/.next/static
+RUN chown -R node:node /app/server /app/client
 
 # --- Runtime configuration ----------------------------------------------------
 ENV NODE_ENV=production
 ENV TZ=Asia/Bangkok
-# CHANGE ME: PORT must match your app AND `--port` in deploy/deploy.sh (step 11).
 ENV PORT=3000
+ENV API_PORT=3001
 EXPOSE 3000
 
 # Do not run as root inside the container.
 USER node
 
-# --- Start command ------------------------------------------------------------
-# CHANGE ME: replace `node dist/index.js` with your app's start command.
-ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["node", "/app/server/container-entrypoint.cjs"]

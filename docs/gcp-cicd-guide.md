@@ -1,6 +1,6 @@
-# GCP and CI/CD Guide for TokTickIT
+# GCP and CI/CD Guide for CPE 334 Food Ordering
 
-This guide explains how the TokTickIT reference is deployed to Google Cloud and released through GitHub Actions. The TA team verified it on 21 October 2026 (Asia/Bangkok). For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
+This guide explains how the CPE 334 Food Ordering application is deployed to Google Cloud and released through GitHub Actions. For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
 
 Account, billing, and credit status change over time. Check your own account and project before you use any value from this guide.
 
@@ -8,10 +8,10 @@ Account, billing, and credit status change over time. Check your own account and
 
 | Part | Technology and files |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Bootstrap; `client/` |
-| Backend | Express, TypeScript, Prisma 5; `server/` |
+| Frontend | Next.js 15, React 19, TypeScript; `client/` |
+| Backend | Express, TypeScript, Prisma 6; `server/` |
 | Database | PostgreSQL; Docker Compose uses PostgreSQL 16 |
-| Cloud container | `Dockerfile` at the root, UI and API in one container on port 3000, running as the non-root `node` user |
+| Cloud container | `Dockerfile` at the root; Next.js listens on port 3000 and proxies `/api` to the Express API on port 3001 in the same non-root container |
 | Local environment | `docker-compose.yml`: database, migration and seed, backend, frontend |
 | Cloud setup | `deploy/deploy.sh`: Cloud Run, Cloud SQL for PostgreSQL 16, Artifact Registry, Cloud Build, Secret Manager, runtime service account |
 | CI | `.github/workflows/ci-docker.yml` |
@@ -45,6 +45,8 @@ Open the UI at `http://localhost:5173` and sign in with the seed accounts for th
 
 Compose has fallback passwords and turns on the demo seed for practice on localhost. Never use this file to run a public service. Compose stores data in a Docker volume. Do not delete the volume if you want to keep your practice data.
 
+On an existing local Compose volume, changing `POSTGRES_USER` or `POSTGRES_DB` does not rename the initialized role or database. Back up and migrate existing data before recreating the app with the new settings; do not remove the volume unless its data is disposable.
+
 ### Option B: Node.js with the UI and API separate
 
 Prepare a PostgreSQL database and set `DATABASE_URL` in `server/.env` to match it. Then use two terminals:
@@ -73,7 +75,7 @@ A Pull Request into `main` runs CI directly. A push to `main` runs the same CI f
 
 1. starts a PostgreSQL 16 service on the GitHub runner;
 2. uses Node.js 24 and Python 3.14, and tests the deploy scripts offline, without reaching GCP;
-3. backend: `npm ci`, migrate, seed, and `npm test`;
+3. backend: `npm ci`, apply checked-in Prisma migrations, and run `npm test`;
 4. frontend: `npm ci`, `npm test`, and `npm run build`; and
 5. builds the Dockerfile with the UI and API together.
 
@@ -95,9 +97,9 @@ Points to know about the script before you run it for real:
 
 - It hides `--password` arguments and does not print the initial administrator or demo passwords. Use a version that has this fix.
 - The first deploy from `deploy.sh` tags the image `latest`. Releases from `deploy.yml` tag it with the commit SHA, so roll back only to SHA tags.
-- The runtime service account gets Secret Manager Secret Accessor only on this app's secrets, not on the whole project. Keep it that way when you add secrets.
+- The runtime service account gets Secret Manager Secret Accessor only on this app's database, admin-password, and JWT secrets, not on the whole project. Keep it that way when you add secrets.
 - `--allow-unauthenticated` makes the HTTP endpoint public. Check the app's own authentication and your organization's policy first.
-- The demo seed is off by default. `--demo` loads sample data only when the database is empty, with a generated password stored in Secret Manager. Demo accounts are allowed in your project because Lab 6 UAT needs them, but their passwords must never be in code or shown on screen.
+- The seed always creates the menu and administrator; `--demo` additionally creates the demo customer with a generated password stored in Secret Manager. Demo accounts are allowed in your project because Lab 6 UAT needs them, but their passwords must never be in code or shown on screen.
 - Cloud SQL costs money for as long as it exists. Check the price for your configuration and region.
 
 Once these are clear, run the deploy and record who ran it, the time, the commit, the image digest, the migration execution, and the revision you got.

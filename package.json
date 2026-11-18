@@ -12,8 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "dev:client": "npm --prefix client run dev",
-    "dev:server": "set NODE_ENV=development && set PORT=3001 && set JWT_SECRET=local-development-jwt-secret-do-not-use-in-production && set DATABASE_URL=postgresql://toktickit:toktickit@localhost:5433/toktickit?schema=public && npx tsx server/src/index.ts",
-    "seed": "set DATABASE_URL=postgresql://toktickit:toktickit@localhost:5433/toktickit?schema=public && npx tsx server/prisma/seed.ts"
+    "dev:server": "set NODE_ENV=development && set PORT=3001 && set JWT_SECRET=local-development-jwt-secret-do-not-use-in-production && set DATABASE_URL=postgresql://food_ordering:food_ordering@localhost:5433/food_ordering?schema=public && npx tsx server/src/index.ts",
+    "seed": "set DATABASE_URL=postgresql://food_ordering:food_ordering@localhost:5433/food_ordering?schema=public && npx tsx server/prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

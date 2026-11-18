@@ -1,18 +1,18 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: toktickit-db
+    container_name: food-ordering-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-toktickit}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-toktickit}
-      POSTGRES_DB: ${POSTGRES_DB:-toktickit}
+      POSTGRES_USER: ${POSTGRES_USER:-food_ordering}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-food_ordering}
+      POSTGRES_DB: ${POSTGRES_DB:-food_ordering}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-toktickit} -d ${POSTGRES_DB:-toktickit}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-food_ordering} -d ${POSTGRES_DB:-food_ordering}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,16 +21,16 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: toktickit-migrate
+    container_name: food-ordering-migrate
     restart: "no"
     depends_on:
       db:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-toktickit}:${POSTGRES_PASSWORD:-toktickit}@db:5432/${POSTGRES_DB:-toktickit}?schema=public
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminInitial123!}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-DemoInitial123!}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-food_ordering}:${POSTGRES_PASSWORD:-food_ordering}@db:5432/${POSTGRES_DB:-food_ordering}?schema=public
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
     command: ["sh", "-c", "npx prisma db push --schema prisma/schema.prisma && npm run prisma:seed"]
 
@@ -38,7 +38,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: toktickit-server
+    container_name: food-ordering-server
     restart: unless-stopped
     depends_on:
       db:
@@ -50,7 +50,7 @@ services:
       TZ: Asia/Bangkok
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-do-not-use-in-production}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-toktickit}:${POSTGRES_PASSWORD:-toktickit}@db:5432/${POSTGRES_DB:-toktickit}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-food_ordering}:${POSTGRES_PASSWORD:-food_ordering}@db:5432/${POSTGRES_DB:-food_ordering}?schema=public
     ports:
       - "3001:3000"
 
@@ -60,7 +60,7 @@ services:
       dockerfile: Dockerfile
     environment:
       API_ORIGIN: http://server:3000
-    container_name: toktickit-client
+    container_name: food-ordering-client
     restart: unless-stopped
     depends_on:
       - server

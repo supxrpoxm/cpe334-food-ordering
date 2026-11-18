@@ -1,4 +1,4 @@
-# Auto Deploy and Rollback for TokTickIT
+# Auto Deploy and Rollback for CPE 334 Food Ordering
 
 ## Overview
 
@@ -14,7 +14,7 @@ An empty `image_tag` means "test and build the current `main`", not a rollback. 
 
 Do the first deploy with `deploy/deploy.sh`. It creates the database, secrets, migration job, and website. The CD pipeline never runs this provisioning script again, and it has no permission to manage IAM or create databases.
 
-The TA rehearsal used project `YOUR_PROJECT_ID`, region `asia-southeast1`, service `toktickit`, job `toktickit-migrate`, and a GitHub environment named `demo`. Use your own project and account.
+The deployment uses project `YOUR_PROJECT_ID`, region `asia-southeast1`, service `food-ordering`, job `food-ordering-migrate`, and a GitHub environment named `demo`. Use your own project and account.
 
 Create the GitHub environment `demo`, allow only the `main` branch to deploy to it, and add these variables:
 
@@ -23,7 +23,7 @@ Create the GitHub environment `demo`, allow only the `main` branch to deploy to 
 | `GCP_PROJECT_ID` | `YOUR_PROJECT_ID` |
 | `GCP_REGION` | `asia-southeast1` |
 | `WIF_PROVIDER` | `projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/providers/github-main` |
-| `WIF_SERVICE_ACCOUNT` | `toktickit-deployer@YOUR_PROJECT_ID.iam.gserviceaccount.com` |
+| `WIF_SERVICE_ACCOUNT` | `food-ordering-deployer@YOUR_PROJECT_ID.iam.gserviceaccount.com` |
 
 Enable the IAM Service Account Credentials API and the Security Token Service API, then set up Workload Identity Federation following [Google's guide](https://github.com/google-github-actions/auth#workload-identity-federation-through-a-service-account). Do not download a service account key.
 
@@ -38,8 +38,8 @@ In the TA rehearsal, `use_immutable_subject=true`, and `sub_claim_prefix` was `r
 Permissions used in the rehearsal:
 
 - Deployer service account: `roles/run.developer` on the project
-- Deployer service account: `roles/artifactregistry.writer` on the `toktickit` repository only
-- Deployer service account: `roles/iam.serviceAccountUser` on the runtime service account `toktickit-runner` only
+- Deployer service account: `roles/artifactregistry.writer` on the `food-ordering` repository only
+- Deployer service account: `roles/iam.serviceAccountUser` on the runtime service account `food-ordering-runner` only
 - Principal from Workload Identity Federation: `roles/iam.workloadIdentityUser` on the deployer service account only
 - The provider checks repository ID `REPO_ID`, owner ID `OWNER_ID`, ref `main`, workflow `deploy.yml`, and subject environment `demo`, so it does not accept tokens from Pull Requests or other forks
 
@@ -47,11 +47,11 @@ The image is built on the GitHub runner and pushed straight to Artifact Registry
 
 ## Smoke test
 
-`python3 deploy/smoke_test.py SERVICE_URL` checks `/api/health`, `/api/ready` (database connected), the HTML at `/`, and the data from `/api/categories`. All checks must pass.
+`python3 deploy/smoke_test.py SERVICE_URL` checks `/api/health`, `/api/ready` (database connected), the HTML at `/`, and a non-empty result from `/api/v1/products?limit=1`. All checks must pass.
 
 The readiness check expects `/api/ready` to return HTTP 200 with `"db": "connected"` in the JSON body. A response with only `{ "status": "ready" }` fails it. Add that field to your endpoint, or change the check in `smoke_test.py` to match what your app returns. A 200 status alone does not prove the database is reachable.
 
-Sign-in is optional. Set the environment variable `SMOKE_EMAIL` and the environment secret `SMOKE_PASSWORD` for a dedicated test account, and the script checks login, me, and logout. Without them it prints `SKIP login`. Never put the administrator password in a workflow or a guide. A passing smoke test does not mean the business flows pass end to end.
+Sign-in is optional. Set the environment variable `SMOKE_EMAIL` and the environment secret `SMOKE_PASSWORD` for a dedicated customer test account, and the script checks login, an authenticated order-list request, and logout using the HttpOnly cookie. Without them it prints `SKIP login`. Never use the administrator account or put a password in a workflow or a guide. A passing smoke test does not mean the business flows pass end to end.
 
 ## Merge gate
 
