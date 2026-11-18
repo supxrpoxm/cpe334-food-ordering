@@ -120,6 +120,7 @@ IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}:l
 SECRET_DB_URL="food-ordering-database-url"
 SECRET_ADMIN_PASS="food-ordering-admin-password"
 SECRET_DEMO_PASS="food-ordering-demo-password"
+SECRET_JWT="food-ordering-jwt-secret"
 
 GENERATED_ADMIN_PASSWORD=""
 GENERATED_DEMO_PASSWORD=""
@@ -265,7 +266,22 @@ else
 fi
 
 # ==============================================================================
-# 8. Optional Demo Password in Secret Manager when --demo is passed
+# 8. Create JWT signing secret (only if it does not exist yet)
+# ==============================================================================
+if [ "$DRY_RUN" = "1" ]; then
+  run_cmd gcloud secrets describe "$SECRET_JWT" --project "$PROJECT_ID"
+  run_cmd gcloud secrets create "$SECRET_JWT" --replication-policy="automatic" --project "$PROJECT_ID"
+  run_cmd gcloud secrets versions add "$SECRET_JWT" --data-file=- --project "$PROJECT_ID"
+else
+  if ! gcloud secrets describe "$SECRET_JWT" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    GENERATED_JWT_SECRET="$(openssl rand -hex 32)"
+    run_cmd gcloud secrets create "$SECRET_JWT" --replication-policy="automatic" --project "$PROJECT_ID"
+    printf "%s" "$GENERATED_JWT_SECRET" | gcloud secrets versions add "$SECRET_JWT" --data-file=- --project "$PROJECT_ID"
+  fi
+fi
+
+# ==============================================================================
+# 9. Optional Demo Password in Secret Manager when --demo is passed
 #    Only used to seed demo users (./deploy/deploy.sh --demo).
 # ==============================================================================
 JOB_SECRETS="DATABASE_URL=${SECRET_DB_URL}:latest,ADMIN_PASSWORD=${SECRET_ADMIN_PASS}:latest"
@@ -290,7 +306,7 @@ fi
 #    binding is added — keep access limited to this app's own secrets.
 # ------------------------------------------------------------------------------
 # Grant access only to this app's secrets, after they exist.
-RUNTIME_SECRETS=("$SECRET_DB_URL" "$SECRET_ADMIN_PASS")
+RUNTIME_SECRETS=("$SECRET_DB_URL" "$SECRET_ADMIN_PASS" "$SECRET_JWT")
 if [ "$SEED_DEMO_DATA" = "true" ]; then
   RUNTIME_SECRETS+=("$SECRET_DEMO_PASS")
 fi
@@ -302,7 +318,7 @@ for secret in "${RUNTIME_SECRETS[@]}"; do
 done
 
 # ==============================================================================
-# 9. Build & Push Unified Container Image via Cloud Build
+# 10. Build & Push Unified Container Image via Cloud Build
 #    Builds the root Dockerfile (run this script from the repo root).
 #    Tag `latest` is only for this first manual setup; deploy.yml uses commit SHAs.
 # ==============================================================================
@@ -311,7 +327,7 @@ run_cmd gcloud builds submit \
   --project "$PROJECT_ID"
 
 # ==============================================================================
-# 10. Create/Update & Execute Cloud Run Job for Migration + Non-destructive Seed
+# 11. Create/Update & Execute Cloud Run Job for Migration + Seed
 #     ⭐ IMPORTANT: if this job fails the script stops BEFORE deploying the
 #        service, so a broken migration never reaches users.
 #     CHANGE ME: `--args` (prisma migrate deploy && npm run prisma:seed) is
@@ -342,7 +358,7 @@ if ! run_cmd gcloud run jobs execute "$MIGRATE_JOB_NAME" \
 fi
 
 # ==============================================================================
-# 11. Deploy Cloud Run Service
+# 12. Deploy Cloud Run Service
 #     CHANGE ME: --port must equal the port in the Dockerfile (3000); tune
 #                --memory / --cpu / --max-instances for your app.
 #     ⚠️ --allow-unauthenticated makes the service public (needed for the demo).
@@ -354,7 +370,7 @@ run_cmd gcloud run deploy "$SERVICE_NAME" \
   --allow-unauthenticated \
   --service-account "$SA_EMAIL" \
   --add-cloudsql-instances "$SQL_CONN_NAME" \
-  --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest" \
+  --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest,JWT_SECRET=${SECRET_JWT}:latest" \
   --set-env-vars "NODE_ENV=production,TZ=Asia/Bangkok" \
   --min-instances 0 \
   --max-instances 3 \
@@ -378,7 +394,7 @@ printf '%s\n' "Deployment Completed!"
 printf '%s\n' "Service URL    : ${SERVICE_URL}"
 printf '%s\n' "Health Check   : ${SERVICE_URL}/api/health"
 printf '%s\n' "Readiness Check: ${SERVICE_URL}/api/ready"
-printf '%s\n' "Admin Email    : john.smith@example.com (mustChangePassword: true)"
+printf '%s\n' "Admin Email    : admin@example.com"
 printf '%s\n' "Admin Password : Stored in Secret Manager: ${SECRET_ADMIN_PASS} (not printed)."
 if [ "$SEED_DEMO_DATA" = "true" ]; then
   printf '%s\n' "Demo Password  : Stored in Secret Manager: ${SECRET_DEMO_PASS} (not printed)."

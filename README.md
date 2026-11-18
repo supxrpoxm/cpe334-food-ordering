@@ -2,22 +2,22 @@
 
 This project takes the CPE 334 Food Ordering application from a laptop to Google Cloud Run with a CI/CD pipeline. These files are adapted for the team's app and stack.
 
-The application code (`client/`, `server/src/`, `server/prisma/`) is not included. Every file here assumes a Node.js 24 frontend and API in one container with PostgreSQL and Prisma. Lines that depend on that are listed under "What to change".
+The app uses Next.js 15 for the frontend, Express and Prisma 6 for the API, and PostgreSQL. The Cloud Run image runs the Next.js server on port 3000 and the API on a private container port.
 
 ## What is in this folder
 
 | File | What it does |
 |---|---|
 | `server/Dockerfile`, `client/Dockerfile`, `client/nginx.conf` | Used by `docker-compose.yml` for local runs: one image for the API, one for the web app served by nginx. |
-| `Dockerfile`, `.dockerignore` | Three-stage build. The React app is built and served by the Express API from one container on port 3000, running as the non-root `node` user. |
+| `Dockerfile`, `.dockerignore` | Builds the Next.js standalone frontend and Express API in one image; Next.js proxies `/api` requests to the API. |
 | `docker-compose.yml` | Runs PostgreSQL, a migration/seed job, the API (`localhost:3000`) and the web app (`localhost:5173`) locally. |
 | `server/.env.example`, `client/.env.example` | Every environment variable the app reads, with placeholders only. Copy to `.env` locally and never commit `.env`. |
-| `server/docker-entrypoint.sh` | Starts the server and nothing else. Migrations run in a separate Cloud Run job. |
+| `server/container-entrypoint.cjs` | Starts the API and Next.js processes and shuts both down when the container stops. Migrations run in a separate Cloud Run job. |
 | `.github/workflows/ci-docker.yml` | Runs on every Pull Request: PostgreSQL service, migrate and seed, backend and frontend tests, deploy script tests, Docker build. The job name `test-and-docker` is the required check for the ruleset. |
 | `.github/workflows/deploy.yml` | Runs on every merge into `main`: CI again, build and push the image tagged with the commit SHA, migration job, Cloud Run update, smoke test. Run it by hand with `image_tag` to roll back. |
 | `deploy/deploy.sh` | One-time setup and first deploy: APIs, Artifact Registry, Cloud SQL, secrets, runtime service account, migration job, and Cloud Run service. Run with `DRY_RUN=1` first. |
 | `deploy/release.sh` | Called by `deploy.yml`. Checks the image exists, reads its digest, runs the migration job, and updates the service. |
-| `deploy/smoke_test.py` | Checks `/api/health`, `/api/ready`, `/`, and `/api/categories`, plus an optional sign-in. |
+| `deploy/smoke_test.py` | Checks `/api/health`, `/api/ready`, `/`, and `/api/v1/products`, plus an optional sign-in. |
 | `deploy/teardown.sh` | Deletes the cloud resources after the course. |
 | `deploy/tests/` | Offline tests for the deploy scripts. CI runs them. |
 | `.github/dependabot.yml` | Opens a Pull Request every week when a GitHub Action used by the workflows has a newer version. |
@@ -31,7 +31,7 @@ The guides are in English. The TA team wrote them during their own rehearsal. Va
 
 0. Follow the Lab 5 Student Guide (the episode series from the TA team). This folder is the material it points to.
 1. Run your app locally in production mode, then with `docker compose up --build`.
-2. Make it cloud-ready: sessions and uploaded files in the database, no demo passwords in production, reference data and the first administrator created by the seed.
+2. Make it cloud-ready: reference data and the first administrator are created by the seed; passwords and the JWT signing key are stored in Secret Manager.
 3. Add `ci-docker.yml` and open a Pull Request to see the checks run.
 4. Confirm billing is open and create a budget alert. In Cloud Shell, run `DRY_RUN=1 PROJECT_ID=YOUR_PROJECT_ID bash deploy/deploy.sh`, read the output, then run it without `DRY_RUN`. The TA guides add `--demo`, which loads sample users with a generated password for teaching. Demo accounts are allowed in your project (you will need them for UAT in Lab 6), but their passwords must come from Secret Manager or environment variables, never from code, and must not be shown on screen.
 5. Follow `docs/auto-deploy.md` to create the deploy service account, Workload Identity Federation, the GitHub environment `demo`, and the ruleset for `main`.

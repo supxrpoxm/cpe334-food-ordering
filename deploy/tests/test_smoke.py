@@ -18,15 +18,15 @@ spec.loader.exec_module(smoke)
 
 
 class SmokeTests(unittest.TestCase):
-    def response(self, base, path, data=None, token=None):
+    def response(self, base, path, data=None, opener=None):
         return {
             '/api/health': b'{"status":"ok"}',
             '/api/ready': b'{"db":"connected"}',
             '/': b'<html></html>',
-            '/api/categories': b'[{"id":1}]',
-            '/api/auth/login': b'{"token":"test-session"}',
-            '/api/auth/me': b'{"id":1}',
-            '/api/auth/logout': b'{}',
+            '/api/v1/products?limit=1': b'{"success":true,"data":[{"id":"product-1"}]}',
+            '/api/auth/login': b'{"success":true,"data":{"email":"smoke@example.test","role":"CUSTOMER"}}',
+            '/api/orders': b'{"success":true,"data":[]}',
+            '/api/auth/logout': b'',
         }[path]
 
     @patch.dict('os.environ', {}, clear=True)
@@ -44,15 +44,15 @@ class SmokeTests(unittest.TestCase):
                 smoke.check('https://demo.test')
 
     @patch.dict('os.environ', {'SMOKE_EMAIL': 'smoke@example.test', 'SMOKE_PASSWORD': 'test-only'}, clear=True)
-    def test_session_is_logged_out_even_if_me_fails(self):
-        def broken_me(base, path, data=None, token=None):
-            if path == '/api/auth/me':
+    def test_session_is_logged_out_even_if_authenticated_check_fails(self):
+        def broken_me(base, path, data=None, opener=None):
+            if path == '/api/orders':
                 raise ValueError('Broken response')
-            return self.response(base, path, data, token)
+            return self.response(base, path, data)
         with patch.object(smoke, 'request', side_effect=broken_me) as req:
             with self.assertRaisesRegex(RuntimeError, 'Login smoke'):
                 smoke.check('https://demo.test')
-            self.assertEqual(req.call_args.args[1], '/api/auth/logout')
+            self.assertEqual(req.call_args_list[-1].args[1], '/api/auth/logout')
 
 
 if __name__ == '__main__':

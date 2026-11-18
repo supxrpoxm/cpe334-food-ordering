@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import express from 'express';
 import { ApiError } from './lib/errors';
+import { prisma } from './lib/prisma';
 import adminOrderRoutes from './routes/adminOrderRoutes';
 import authRoutes from './routes/authRoutes';
 import orderRoutes from './routes/orderRoutes';
@@ -11,6 +12,20 @@ const app = express();
 
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
+
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/ready', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: 'ready', db: 'connected' });
+  } catch (error) {
+    console.error('Database readiness check failed', error);
+    res.status(503).json({ status: 'not_ready', db: 'disconnected' });
+  }
+});
 
 app.get('/', (_req, res) =>
   res.json({ status: 'ok', message: 'Backend is running' }),

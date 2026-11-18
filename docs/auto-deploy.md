@@ -47,11 +47,11 @@ The image is built on the GitHub runner and pushed straight to Artifact Registry
 
 ## Smoke test
 
-`python3 deploy/smoke_test.py SERVICE_URL` checks `/api/health`, `/api/ready` (database connected), the HTML at `/`, and the data from `/api/categories`. All checks must pass.
+`python3 deploy/smoke_test.py SERVICE_URL` checks `/api/health`, `/api/ready` (database connected), the HTML at `/`, and a non-empty result from `/api/v1/products?limit=1`. All checks must pass.
 
 The readiness check expects `/api/ready` to return HTTP 200 with `"db": "connected"` in the JSON body. A response with only `{ "status": "ready" }` fails it. Add that field to your endpoint, or change the check in `smoke_test.py` to match what your app returns. A 200 status alone does not prove the database is reachable.
 
-Sign-in is optional. Set the environment variable `SMOKE_EMAIL` and the environment secret `SMOKE_PASSWORD` for a dedicated test account, and the script checks login, me, and logout. Without them it prints `SKIP login`. Never put the administrator password in a workflow or a guide. A passing smoke test does not mean the business flows pass end to end.
+Sign-in is optional. Set the environment variable `SMOKE_EMAIL` and the environment secret `SMOKE_PASSWORD` for a dedicated customer test account, and the script checks login, an authenticated order-list request, and logout using the HttpOnly cookie. Without them it prints `SKIP login`. Never use the administrator account or put a password in a workflow or a guide. A passing smoke test does not mean the business flows pass end to end.
 
 ## Merge gate
 

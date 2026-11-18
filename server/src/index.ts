@@ -1,6 +1,7 @@
 import app from './app';
 
-const port = Number(process.env.PORT) || 3001;
+const port =
+  Number(process.env.API_PORT) || Number(process.env.PORT) || 3001;
 const server = app.listen(port, () => {
   console.log(`Food ordering API listening on port ${port}`);
 });
