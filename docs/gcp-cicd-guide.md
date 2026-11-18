@@ -1,6 +1,6 @@
-# GCP and CI/CD Guide for TokTickIT
+# GCP and CI/CD Guide for CPE 334 Food Ordering
 
-This guide explains how the TokTickIT reference is deployed to Google Cloud and released through GitHub Actions. The TA team verified it on 21 October 2026 (Asia/Bangkok). For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
+This guide explains how the CPE 334 Food Ordering application is deployed to Google Cloud and released through GitHub Actions. For a short hands-on version, start with [First Practice](gcp-first-lab.md). Automatic deployment and rollback are in [Auto Deploy](auto-deploy.md).
 
 Account, billing, and credit status change over time. Check your own account and project before you use any value from this guide.
 

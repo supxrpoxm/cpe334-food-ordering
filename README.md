@@ -1,6 +1,6 @@
 # CPE 334 Lab 5 Starter Files
 
-These files take TokTickIT from a laptop to Google Cloud Run with a CI/CD pipeline. They are the worked example for Lab 5. Your team's project uses a different app and maybe a different stack, so copy the files into your repository and adapt them. The Lab 5 handout explains the rules each file must follow.
+This project takes the CPE 334 Food Ordering application from a laptop to Google Cloud Run with a CI/CD pipeline. These files are adapted for the team's app and stack.
 
 The application code (`client/`, `server/src/`, `server/prisma/`) is not included. Every file here assumes a Node.js 24 frontend and API in one container with PostgreSQL and Prisma. Lines that depend on that are listed under "What to change".
 
@@ -46,7 +46,7 @@ Environment `demo`, deployable only from `main`, with these variables:
 | `GCP_PROJECT_ID` | `YOUR_PROJECT_ID` |
 | `GCP_REGION` | `asia-southeast1` |
 | `WIF_PROVIDER` | `projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/providers/github-main` |
-| `WIF_SERVICE_ACCOUNT` | `toktickit-deployer@YOUR_PROJECT_ID.iam.gserviceaccount.com` |
+| `WIF_SERVICE_ACCOUNT` | `food-ordering-deployer@YOUR_PROJECT_ID.iam.gserviceaccount.com` |
 
 Optional: `SMOKE_EMAIL` as a variable and `SMOKE_PASSWORD` as a secret, for the sign-in check. Set both or neither.
 
@@ -54,7 +54,7 @@ Ruleset for `main`: Enforcement Active, empty bypass list, Require a pull reques
 
 ## What to change for your project
 
-- Names: the service `toktickit`, the job `toktickit-migrate`, the Artifact Registry repository, and the Cloud SQL instance and database appear in `deploy/deploy.sh`, `deploy/release.sh`, and `deploy.yml`. Rename them consistently.
+- Names: the service `food-ordering`, the job `food-ordering-migrate`, the Artifact Registry repository, and the Cloud SQL instance and database appear in `deploy/deploy.sh`, `deploy/release.sh`, and `deploy.yml`.
 - `Dockerfile`: the build commands, the paths copied into the final image, and the port. The final image must contain every file the server and the seed need at run time.
 - `ci-docker.yml`: the install, migrate, seed, test, and build commands for your stack.
 - `deploy/deploy.sh` and `release.sh`: the migration job command (`prisma migrate deploy` and the seed) and the secrets your app reads.
