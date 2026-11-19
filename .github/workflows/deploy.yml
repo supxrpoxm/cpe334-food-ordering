@@ -104,8 +104,8 @@ jobs:
       id-token: write # required for keyless Google Cloud login (WIF)
     env:
       # ⚠️ Variable names GCP_PROJECT_ID / GCP_REGION must not change.
-      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      REGION: ${{ vars.GCP_REGION }}
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'cpe334-th-048-p4' }}
+      REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
       # CHANGE ME: names of your Cloud Run service and migration job.
       SERVICE_NAME: food-ordering
       MIGRATE_JOB_NAME: food-ordering-migrate
@@ -126,8 +126,8 @@ jobs:
       # ------------------------------------------------------------------------
       - name: Validate deployment settings
         env:
-          WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-          WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          WIF_PROVIDER: ${{ vars.WIF_PROVIDER || 'projects/905668196750/locations/global/workloadIdentityPools/github-actions/providers/github-main' }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT || 'food-ordering-deployer@cpe334-th-048-p4.iam.gserviceaccount.com' }}
         run: |
           test -n "$PROJECT_ID" && test -n "$REGION"
           test -n "$WIF_PROVIDER" && test -n "$WIF_SERVICE_ACCOUNT"
@@ -140,8 +140,8 @@ jobs:
       - name: Authenticate to Google Cloud without a key
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER || 'projects/905668196750/locations/global/workloadIdentityPools/github-actions/providers/github-main' }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT || 'food-ordering-deployer@cpe334-th-048-p4.iam.gserviceaccount.com' }}
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
       # ------------------------------------------------------------------------
