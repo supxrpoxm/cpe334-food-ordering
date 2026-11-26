@@ -4,7 +4,7 @@ const { once } = require('node:events');
 const children = [
   {
     name: 'API',
-    process: spawn(process.execPath, ['/app/server/dist/index.js'], {
+    process: spawn(process.execPath, ['/app/server/dist/src/index.js'], {
       env: { ...process.env, PORT: process.env.API_PORT || '3001' },
       stdio: 'inherit',
     }),

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient, Role } from '@prisma/client';
+import process from 'node:process';
 
 const prisma = new PrismaClient();
 const saltRounds = 10;

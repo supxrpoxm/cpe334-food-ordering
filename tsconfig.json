@@ -16,6 +16,7 @@
   "include": [
     "tests/**/*.ts",
     "server/src/**/*.ts",
+    "server/prisma/**/*.ts",
     "vitest.config.ts"
   ]
 }
