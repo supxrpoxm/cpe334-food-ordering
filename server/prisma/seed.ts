@@ -28,10 +28,12 @@ async function seed(): Promise<void> {
   if (
     process.env.NODE_ENV === 'production' &&
     (!process.env.ADMIN_PASSWORD ||
-      (seedDemoData && !process.env.DEMO_USER_PASSWORD))
+      (seedDemoData &&
+        (!process.env.DEMO_USER_PASSWORD ||
+          !process.env.DEMO_USER_B_PASSWORD)))
   ) {
     throw new Error(
-      'ADMIN_PASSWORD is required in production, and DEMO_USER_PASSWORD is required when demo data is enabled.',
+      'ADMIN_PASSWORD is required in production, and both demo customer passwords are required when demo data is enabled.',
     );
   }
 
@@ -65,6 +67,12 @@ async function seed(): Promise<void> {
             name: 'Demo Customer',
             role: Role.CUSTOMER,
             password: process.env.DEMO_USER_PASSWORD || 'TestPassword123!',
+          },
+          {
+            email: 'customer-b@example.com',
+            name: 'Demo Customer B',
+            role: Role.CUSTOMER,
+            password: process.env.DEMO_USER_B_PASSWORD || 'TestPassword456!',
           },
         ]
       : []),

@@ -120,10 +120,12 @@ IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}:l
 SECRET_DB_URL="food-ordering-database-url"
 SECRET_ADMIN_PASS="food-ordering-admin-password"
 SECRET_DEMO_PASS="food-ordering-demo-password"
+SECRET_DEMO_B_PASS="food-ordering-demo-user-b-password"
 SECRET_JWT="food-ordering-jwt-secret"
 
 GENERATED_ADMIN_PASSWORD=""
 GENERATED_DEMO_PASSWORD=""
+GENERATED_DEMO_B_PASSWORD=""
 
 echo "=================================================================="
 echo "CPE 334 Food Ordering Cloud Run Deployment"
@@ -290,14 +292,23 @@ if [ "$SEED_DEMO_DATA" = "true" ]; then
     run_cmd gcloud secrets describe "$SECRET_DEMO_PASS" --project "$PROJECT_ID"
     run_cmd gcloud secrets create "$SECRET_DEMO_PASS" --replication-policy="automatic" --project "$PROJECT_ID"
     run_cmd gcloud secrets versions add "$SECRET_DEMO_PASS" --data-file=- --project "$PROJECT_ID"
+    run_cmd gcloud secrets describe "$SECRET_DEMO_B_PASS" --project "$PROJECT_ID"
+    run_cmd gcloud secrets create "$SECRET_DEMO_B_PASS" --replication-policy="automatic" --project "$PROJECT_ID"
+    run_cmd gcloud secrets versions add "$SECRET_DEMO_B_PASS" --data-file=- --project "$PROJECT_ID"
   else
     if ! gcloud secrets describe "$SECRET_DEMO_PASS" --project "$PROJECT_ID" >/dev/null 2>&1; then
       GENERATED_DEMO_PASSWORD="$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-14)Dd1!"
       run_cmd gcloud secrets create "$SECRET_DEMO_PASS" --replication-policy="automatic" --project "$PROJECT_ID"
       printf "%s" "$GENERATED_DEMO_PASSWORD" | gcloud secrets versions add "$SECRET_DEMO_PASS" --data-file=- --project "$PROJECT_ID"
     fi
+    if ! gcloud secrets describe "$SECRET_DEMO_B_PASS" --project "$PROJECT_ID" >/dev/null 2>&1; then
+      GENERATED_DEMO_B_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)Bb7!"
+      run_cmd gcloud secrets create "$SECRET_DEMO_B_PASS" --replication-policy="automatic" --project "$PROJECT_ID"
+      printf "%s" "$GENERATED_DEMO_B_PASSWORD" | gcloud secrets versions add "$SECRET_DEMO_B_PASS" --data-file=- --project "$PROJECT_ID"
+    fi
   fi
   JOB_SECRETS="${JOB_SECRETS},DEMO_USER_PASSWORD=${SECRET_DEMO_PASS}:latest"
+  JOB_SECRETS="${JOB_SECRETS},DEMO_USER_B_PASSWORD=${SECRET_DEMO_B_PASS}:latest"
 fi
 
 # ------------------------------------------------------------------------------
@@ -308,7 +319,7 @@ fi
 # Grant access only to this app's secrets, after they exist.
 RUNTIME_SECRETS=("$SECRET_DB_URL" "$SECRET_ADMIN_PASS" "$SECRET_JWT")
 if [ "$SEED_DEMO_DATA" = "true" ]; then
-  RUNTIME_SECRETS+=("$SECRET_DEMO_PASS")
+  RUNTIME_SECRETS+=("$SECRET_DEMO_PASS" "$SECRET_DEMO_B_PASS")
 fi
 for secret in "${RUNTIME_SECRETS[@]}"; do
   run_cmd gcloud secrets add-iam-policy-binding "$secret" \
@@ -397,6 +408,6 @@ printf '%s\n' "Readiness Check: ${SERVICE_URL}/api/ready"
 printf '%s\n' "Admin Email    : admin@example.com"
 printf '%s\n' "Admin Password : Stored in Secret Manager: ${SECRET_ADMIN_PASS} (not printed)."
 if [ "$SEED_DEMO_DATA" = "true" ]; then
-  printf '%s\n' "Demo Password  : Stored in Secret Manager: ${SECRET_DEMO_PASS} (not printed)."
+  printf '%s\n' "Demo Passwords : Stored in Secret Manager: ${SECRET_DEMO_PASS}, ${SECRET_DEMO_B_PASS} (not printed)."
 fi
 printf '%s\n' "=================================================================="

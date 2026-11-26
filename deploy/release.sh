@@ -61,7 +61,10 @@ DIGEST_IMAGE="$(gcloud artifacts docker images describe "$IMAGE" --project="$PRO
 #    ⭐ IMPORTANT: a failure here aborts the release (set -e) — service untouched.
 # ------------------------------------------------------------------------------
 if [[ "$ROLLBACK" == false ]]; then
-  gcloud run jobs update "$MIGRATE_JOB_NAME" --image="$DIGEST_IMAGE" --project="$PROJECT_ID" --region="$REGION" --quiet
+  gcloud run jobs update "$MIGRATE_JOB_NAME" \
+    --image="$DIGEST_IMAGE" \
+    --update-secrets="DEMO_USER_B_PASSWORD=food-ordering-demo-user-b-password:latest" \
+    --project="$PROJECT_ID" --region="$REGION" --quiet
   gcloud run jobs execute "$MIGRATE_JOB_NAME" --wait --project="$PROJECT_ID" --region="$REGION" --quiet
 else
   echo 'Rollback: reuse existing image; skip tests, build, migration and seed.'
