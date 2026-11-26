@@ -8,22 +8,43 @@ This pack is the executable handoff and evidence worksheet for Lab 6. It covers 
 
 | Field | Record |
 |---|---|
-| Product / repository | Good Table food ordering / `https://github.com/supxrpoxm/cpe334-food-ordering` (verify access) |
-| Product Team students / IDs | [TBD] |
+| Product / repository | Food Ordering System (Good Table) / `https://github.com/supxrpoxm/cpe334-food-ordering` |
+| Product Team students / IDs | Panuwat Boonsak (ภานุวัฒน์ บุญศักดิ์), 67070501034; Rattananan Siripolwat (รัตนนันทน์ สิริพลวัฒน์), 67070501038 |
 | Partner UAT Team students / IDs | [TBD] |
-| Sprint 1 baseline tag and commit | [TBD — exact tag and full commit SHA] |
-| Deployed release/revision and deployment time | [TBD — exact deployed revision] |
-| UAT base URL | [TBD — deployed URL] |
+| Sprint 1 tested release | Release 2, `main` commit `3e1b192e0f41bd7157cb5fc4c6e686995d60a1dc`; Lab 5 evidence does not state a separate Sprint 1 tag |
+| Deployment evidence | Deploy run `44583799206`; image `asia-southeast1-docker.pkg.dev/cpe334-th-048-p4/food-ordering/food-ordering@sha256:52d603df80614b81a8ed4b64434432f57b3944bc8bdf02c66a7f8abcea628bdd` |
+| Cloud Run service / project / region | `food-ordering` / `cpe334-th-048-p4` / `asia-southeast1` |
+| Cloud Run revision receiving traffic | Confirm from Cloud Run before UAT; the Lab 5 PDF does not record the revision name or traffic percentage |
+| UAT base URL | `https://food-ordering-905668196750.asia-southeast1.run.app` |
+| Readiness endpoints | `/api/health` → `{"status":"ok"}`; `/api/ready` → `{"status":"ready","db":"connected"}` when ready. Neither returns a commit SHA. |
 | Scope accepted for testing | F-01 through F-05 as implemented and contracted for Sprint 1; see `docs/sprints/sprint-1/` |
 | Known scope exclusions | Real payment gateway, persistent cart, supplier/advanced inventory, refunds/returns, analytics, cloud/container enhancements |
 | Handoff contact/channel and date | [TBD] |
 | Credentials handoff | Send privately to partner; do not put secret values in this file/PDF/Git |
 
+### Release identity and readiness evidence
+
+The Lab 5 PDF records deploy run `44583799206`, the commit and full image digest above, plus a screenshot of the live Release 2 page. It does not show the Cloud Run revision receiving traffic or prove the traffic percentage is 100%. Before UAT, a project owner with Cloud Run access should capture this read-only output:
+
+```sh
+gcloud run services describe food-ordering \
+  --project=cpe334-th-048-p4 --region=asia-southeast1 \
+  --format='yaml(status.traffic)'
+
+gcloud run revisions describe REVISION_FROM_TRAFFIC_OUTPUT \
+  --project=cpe334-th-048-p4 --region=asia-southeast1 \
+  --format='value(status.imageDigest)'
+```
+
+Attach the output or a Cloud Run screenshot proving the selected revision receives 100% traffic and its image digest matches the digest above. If traffic is split, the digest differs, or the revision cannot be confirmed, pause UAT until the Product Team resolves release identity.
+
+The observed `/api/ready` response uses the key `db`, not `database`. A 200 response with `status: ready` and `db: connected` confirms application and database readiness; the `database` spelling in the Lab 5 PDF is a documentation mismatch. This readiness result does not independently verify the deployed commit or image.
+
 ### Safe account and data setup
 
-Use synthetic test accounts only. The local seed defines `customer@example.com` (CUSTOMER) and `admin@example.com` (ADMIN); production/demo credentials must be supplied through the approved private course handoff and must never be copied here. The product seed includes Grilled Chicken Rice Bowl (฿89.00, stock 18), Basil Pork Rice (฿79.00, stock 12), and Crispy Tofu Rice Bowl (฿75.00, stock 0). Confirm actual values on the tested deployment before execution because orders decrement stock.
+Use synthetic test accounts only. The seed defines `customer@example.com` (CUSTOMER) and `admin@example.com` (ADMIN); production/demo credentials must be supplied through the approved private course handoff and must never be copied here. The product seed includes Grilled Chicken Rice Bowl (฿89.00, stock 18), Basil Pork Rice (฿79.00, stock 12), and Crispy Tofu Rice Bowl (฿75.00, stock 0). Confirm actual values on the tested deployment before execution because orders decrement stock.
 
-Provision a second CUSTOMER account labelled **Customer B** through the approved test-data procedure for ownership checks. Do not share Customer A's password with Customer B. If no safe second account is available, record the affected ownership case BLOCKED; do not substitute an unperformed check.
+Only one CUSTOMER and one ADMIN account are recorded in the Lab 5 handoff. The application has no self-registration flow. Before UAT-03, the Product Team must provision a second synthetic CUSTOMER account labelled **Customer B** using an approved access-controlled procedure, then send its credentials privately. Do not use an Admin account as Customer B or share Customer A's password. Until provisioned, mark Customer-to-Customer ownership testing BLOCKED; do not claim it passed.
 
 Before each run, record starting stock and order IDs. Cases UAT-01 through UAT-05 are designed to run in order on a disposable/test deployment. Restore seeded product stock and clear only the synthetic orders created by this run using the approved environment procedure before a rerun. Do not reset or modify a shared/live assessed environment without the Product Team's coordination. Logout and clear browser session after each role switch.
 
