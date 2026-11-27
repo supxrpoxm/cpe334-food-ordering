@@ -82,7 +82,11 @@ async function seed(): Promise<void> {
     const passwordHash = await bcrypt.hash(account.password, saltRounds);
     await prisma.user.upsert({
       where: { email: account.email },
-      update: {},
+      update: {
+        name: account.name,
+        role: account.role,
+        passwordHash,
+      },
       create: {
         email: account.email,
         name: account.name,

@@ -5,10 +5,13 @@ import { prisma } from '../lib/prisma';
 import { ApiError, validationError } from '../lib/errors';
 import { asyncHandler, isPlainObject } from '../lib/http';
 import {
+  ACCESS_TOKEN_COOKIE,
   ACCESS_TOKEN_TTL_SECONDS,
   clearAccessTokenCookie,
+  readCookie,
   setAccessTokenCookie,
 } from '../lib/cookies';
+import { Role } from '@prisma/client';
 
 const router = Router();
 
@@ -95,6 +98,35 @@ router.post(
         role: user.role,
       },
     });
+  }),
+);
+
+router.get(
+  '/me',
+  asyncHandler(async (req, res) => {
+    const token = readCookie(req, ACCESS_TOKEN_COOKIE);
+    const secret = getJwtSecret();
+    let decoded: unknown;
+    try {
+      if (!token) throw new Error('Missing access token');
+      decoded = jwt.verify(token, secret);
+    } catch {
+      throw new ApiError(401, 'UNAUTHENTICATED', 'Authentication required.');
+    }
+
+    if (!isPlainObject(decoded) || typeof decoded.userId !== 'string' ||
+      (decoded.role !== Role.CUSTOMER && decoded.role !== Role.ADMIN)) {
+      throw new ApiError(401, 'UNAUTHENTICATED', 'Authentication required.');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, name: true, role: true },
+    });
+    if (!user) {
+      throw new ApiError(401, 'UNAUTHENTICATED', 'Authentication required.');
+    }
+    res.status(200).json({ success: true, data: user });
   }),
 );
 
