@@ -6,14 +6,16 @@
 
 | Requirement ID | Requirement Description (from SRS Part A) | Linked Feature ID | Sprint & Verification Method | Ref. Artifact / Target Test |
 | :--- | :--- | :--- | :--- | :--- |
-| **FR-01** | Product Catalog Browsing (แสดงรายการสินค้า ราคา และสต็อกจริง) | **F-01** | Sprint 1; AC-01 / TEST-01 | `docs/sprints/sprint-1/` (API Test `GET /api/products`) |
-| **FR-02** | Order Creation (ลูกค้าสร้างคำสั่งซื้อสินค้า) | **F-02** | Sprint 1; AC-02 / TEST-02 | `docs/sprints/sprint-1/` (E2E / API Test `POST /api/orders`) |
-| **FR-03** | Admin Order Status Management (Admin เรียกดูและเปลี่ยนสถานะออเดอร์) | **F-04** | Sprint 1; AC-03 / TEST-03 | `docs/sprints/sprint-1/` (API Test `PATCH /api/admin/orders/:id/status`) |
-| **BR-01** | Stock Validation (ปฏิเสธคำสั่งซื้อหากสต็อกไม่พอหรือจำนวน <= 0) | **F-03** | Sprint 1; AC-04 / TEST-04 | `docs/sprints/sprint-1/` (Unit/Integration Test for Stock Rule) |
-| **BR-02** | Authoritative Server-side Pricing (คำนวณราคาสุดท้ายและ Snapshot บน Server) | **F-03** | Sprint 1; AC-05 / TEST-05 | `docs/sprints/sprint-1/` (Integration Test for Pricing preservation) |
-| **BR-03** | Order State Transition Constraint (ควบคุมลำดับการเปลี่ยนสถานะ PENDING -> PAID -> SHIPPED) | **F-04** | Sprint 1; AC-06 / TEST-06 | `docs/sprints/sprint-1/` (Unit Test for State Machine validation) |
-| **NFR-01** | Security & RBAC (ปฏิเสธการเข้าถึง Resource ข้ามสิทธิ์ คืนค่า 401/403) | **F-05** | Sprint 1; AC-07 / TEST-07 | `docs/sprints/sprint-1/` (Automated API Permission Test) |
-| **NFR-02** | Data Integrity & Transactional Consistency (ใช้ DB Transaction ในการตัดสต็อก) | **F-03** | Sprint 1; AC-08 / TEST-08 | `docs/sprints/sprint-1/` (Concurrency / Integration Test) |
+| **FR-01** | Product Catalog Browsing (แสดงรายการสินค้า ราคา และสต็อกจริง) | **F-01** | Sprint 1; AC-F01-01–03 | `tests/f01-product-catalog.test.ts`; `GET /api/products` และ versioned alias `/api/v1/products` |
+| **FR-02** | Customer Order Creation (ลูกค้าสร้างคำสั่งซื้อสินค้า) | **F-02** | Sprint 1; AC-02, AC-02.1–02.5 | `tests/f02-order-placement.test.ts`; `POST /api/orders`, `GET /api/orders`, `GET /api/orders/:id` |
+| **FR-03** | Admin Order Status Management (Admin ดูและเปลี่ยนสถานะออเดอร์) | **F-04** | Sprint 1; AC-F04-01–03 | `tests/f04-admin-order-status.test.ts`; `GET /api/v1/admin/orders`, `PATCH /api/v1/admin/orders/:id/status` |
+| **BR-01** | Stock Validation (ปฏิเสธคำสั่งซื้อหากสต็อกไม่พอหรือจำนวนไม่ถูกต้อง) | **F-03** (called by F-02) | Sprint 1; F-03 stock validation AC/STS | `tests/f03-stock-pricing-engine.test.ts`, `tests/f02-order-placement.test.ts` |
+| **BR-02** | Server-authoritative Pricing (snapshot ราคาจากฐานข้อมูลและคำนวณยอดรวมบน Server) | **F-03** (called by F-02) | Sprint 1; F-03 pricing AC/STS | `tests/f03-stock-pricing-engine.test.ts`, `tests/f02-order-placement.test.ts` |
+| **BR-03** | Order State Transition Constraint (อนุญาตเฉพาะ transition ใน state machine; terminal states เปลี่ยนต่อไม่ได้) | **F-04** | Sprint 1; AC-F04-02–03 | `tests/f04-admin-order-status.test.ts`; integration test for transitions and history |
+| **NFR-01** | Security & RBAC (ยืนยันตัวตน, role authorization, ownership isolation) | **F-05** and authorization boundaries in F-02/F-04 | Sprint 1; F-05 AC-07 and feature security ACs | `tests/f05-auth-rbac.test.ts`, `tests/f02-order-placement.test.ts`, `tests/f04-admin-order-status.test.ts` |
+| **NFR-02** | Data Integrity & Transactional Consistency (ใช้ DB transaction สำหรับ order, items และ stock deduction) | **F-03** (called by F-02) | Sprint 1; F-03 transaction/concurrency ACs | `tests/f03-stock-pricing-engine.test.ts`, `tests/f02-order-placement.test.ts` |
+
+> **Role baseline:** Sprint 1 Prisma `Role` enum รองรับ `CUSTOMER` และ `ADMIN` เท่านั้น. เอกสารและ access matrix จึงใช้ `ADMIN` สำหรับงานผู้ดูแล; `STAFF` ยังไม่ใช่ role ที่ระบบ implement.
 
 ---
 

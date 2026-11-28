@@ -28,7 +28,7 @@
 - **Business Rules & Validation:**
   - **NFR-01:** Protected Endpoint ต้องปฏิเสธผู้ใช้ที่ไม่มีสิทธิ์ด้วย `401 Unauthorized` (ยังไม่ยืนยันตัวตน) หรือ `403 Forbidden` (ยืนยันตัวตนแล้วแต่ Role/Ownership ไม่ถูกต้อง)
   - **NFR-01:** Customer ต้องเข้าถึงได้เฉพาะ Order ของตนเอง; การเข้าถึง Order ของ Customer ท่านอื่นต้องได้ `403 Forbidden`
-  - **NFR-01:** Customer ต้องไม่สามารถเรียก Admin Endpoint (`PATCH /api/admin/orders/:id/status`) ได้; ต้องได้ `403 Forbidden`
+  - **NFR-01:** Customer ต้องไม่สามารถเรียก Admin Endpoint (`PATCH /api/v1/admin/orders/:id/status`) ได้; ต้องได้ `403 Forbidden`
   - **NFR-01:** Admin ต้องไม่สามารถสร้าง Order ผ่าน `POST /api/orders` ได้; ต้องได้ `403 Forbidden` ตาม Access Matrix
   - **Decision-02:** JWT ต้องถูกเก็บใน HTTP-Only Cookie เท่านั้น; ห้ามเก็บใน `localStorage` หรือ `sessionStorage`
   - Cookie ต้องตั้งค่า `HttpOnly`, `SameSite=Lax`, `Path=/`, และ `Secure` ใน Production
@@ -49,7 +49,7 @@
   - JWT ถูกต้องแต่ Role ไม่พอ → `403 FORBIDDEN_ROLE`
   - Customer พยายามเข้าถึง Order ของ Customer ท่านอื่น → `403 FORBIDDEN_RESOURCE`
   - Admin เรียก `POST /api/orders` → `403 FORBIDDEN_ROLE`
-  - Customer เรียก `PATCH /api/admin/orders/:id/status` → `403 FORBIDDEN_ROLE`
+  - Customer เรียก `PATCH /api/v1/admin/orders/:id/status` → `403 FORBIDDEN_ROLE`
   - Logout โดยไม่มี Cookie หรือ Logout ซ้ำ → `204 No Content` (Idempotent)
   - หลัง Logout แล้วนำ Token เดิมมาใช้ → Token ยังใช้ได้จนหมดอายุ (Sprint 1 Limitation ที่ต้องบันทึกและทดสอบตามพฤติกรรมจริง)
   - JWT ที่ถูกแก้ไข Claim `role` เป็น `ADMIN` โดยไม่มี Secret → Signature Verification ล้มเหลว → `401 UNAUTHORIZED`
@@ -63,7 +63,7 @@
   | Create New Order | `POST` | Permitted (Own `userId` only) | Denied (`403`) | Denied (`401`) |
   | View Order History | `GET` | Permitted (Own orders only) | Permitted (All system orders) | Denied (`401`) |
   | View Order Detail | `GET` | Permitted (Own order ID only) | Permitted (Any order ID) | Denied (`401`) |
-  | Update Order Status | `PATCH` | Denied (`403`) | Permitted (`/api/admin/orders/:id/status`) | Denied (`401`) |
+  | Update Order Status | `PATCH` | Denied (`403`) | Permitted (`/api/v1/admin/orders/:id/status`) | Denied (`401`) |
 
 ## 2. Technical Specification
 
@@ -85,9 +85,9 @@
     - `POST /api/orders` — Customer เท่านั้น (F-02)
     - `GET /api/orders` — Customer (Own only) / Admin (All)
     - `GET /api/orders/:id` — Customer (Own only) / Admin (Any)
-    - `PATCH /api/admin/orders/:id/status` — Admin เท่านั้น (F-04)
+    - `PATCH /api/v1/admin/orders/:id/status` — Admin เท่านั้น (F-04)
   - `GET /api/products` — Public (F-01)
-  - **No additional Auth Endpoint:** ไม่มี `GET /api/auth/me` ใน Sprint 1 ตาม System SDS; UI ใช้ข้อมูลผู้ใช้จาก Login Response และใช้ Server Response ของ Protected Endpoint ในการตรวจสอบ Session หลัง Reload
+  - `GET /api/auth/me` — Implemented session-profile endpoint: reads the `access_token` HttpOnly cookie, returns `200` with `{ id, email, name, role }` in the standard `data` envelope, or `401 UNAUTHENTICATED` when the session is absent/invalid. This was added as an implementation extension after the original Sprint 1 baseline and does not change the role model.
 
 - **Request, Response & Error Shapes:** (JSON)
 
@@ -95,7 +95,7 @@
   ```json
   {
     "email": "customer@example.com",
-    "password": "TestPassword123!"
+    "password": "<test credential supplied through an approved private channel>"
   }
   ```
 
@@ -115,6 +115,13 @@
   ```http
   Set-Cookie: access_token=<jwt>; HttpOnly; Path=/; SameSite=Lax; Max-Age=<token-ttl>
   ```
+
+  **Request/Response — `GET /api/auth/me`**
+  ```http
+  GET /api/auth/me
+  Cookie: access_token=<jwt>
+  ```
+  Authenticated response is `200 OK` with `success: true` and `data: { id, email, name, role }`; no password hash is returned. Missing, expired, invalid, or deleted-user session returns `401` with code `UNAUTHENTICATED`.
 
   **Request — `POST /api/auth/logout`**
   ```http
@@ -142,7 +149,8 @@
   | :--- | :--- | :--- |
   | 400 | `VALIDATION_ERROR` | ไม่ส่ง `email`/`password` หรือรูปแบบไม่ถูกต้อง |
   | 401 | `INVALID_CREDENTIALS` | Email ไม่มีในระบบ หรือ Password ไม่ถูกต้อง |
-  | 401 | `UNAUTHORIZED` | ไม่มี Cookie, JWT หมดอายุ, Signature ผิด, หรือ JWT ไม่ถูกต้อง |
+  | 401 | `UNAUTHORIZED` | ไม่มี Cookie, JWT หมดอายุ, Signature ผิด, หรือ JWT ไม่ถูกต้องสำหรับ Protected Endpoint |
+  | 401 | `UNAUTHENTICATED` | ไม่มี/invalid session สำหรับ `GET /api/auth/me` |
   | 403 | `FORBIDDEN_ROLE` | Role ไม่มีสิทธิ์สำหรับ Endpoint |
   | 403 | `FORBIDDEN_RESOURCE` | Customer พยายามเข้าถึง Resource ของผู้อื่น |
 
@@ -152,7 +160,7 @@
   - `User.email` (`String`, `@unique`): ใช้เป็น Login Identifier; ต้อง Normalize เป็น Trim/Lowercase
   - `User.passwordHash` (`String`, map `password_hash`): เก็บเฉพาะ `bcrypt` Hash; ห้ามส่งกลับ API หรือ Log
   - `User.name` (`String`): ข้อมูลแสดงผล
-  - `User.role` (`Role` Enum: `CUSTOMER`, `ADMIN`; default `CUSTOMER`): ใช้สำหรับ Authorization
+  - `User.role` (`Role` Enum: `CUSTOMER`, `ADMIN`; default `CUSTOMER`): ใช้สำหรับ Authorization; `STAFF` ยังไม่รองรับใน Sprint 1
   - `User.createdAt` / `User.updatedAt`: Audit Timestamp
   - ไม่มี `Session`/`RefreshToken` Table ใน Sprint 1; JWT เป็น Stateless และใช้ `JWT_SECRET` จาก Environment Variable
   - Seed Script ต้องสร้าง Seeded Test Accounts ตาม Assumption-01 โดยรหัสผ่านต้องถูก Hash ด้วย `bcrypt` และไม่ถูก Commit เป็น Plaintext ใน Source Code
@@ -166,7 +174,7 @@
 | **AC-07.2** | Protected Endpoint ปฏิเสธ Request ที่ไม่มี JWT หรือ JWT ไม่ถูกต้อง/หมดอายุ ด้วย `401 Unauthorized` | ไม่มี Cookie, JWT หมดอายุ, Signature ผิด, JWT รูปแบบผิด, Role ใน Token ไม่ถูกต้อง → `401`; ต้องไม่ประมวลผล Business Logic ต่อ | Protected Endpoint ทั้งหมด |
 | **AC-07.3** | Logout Clear Cookie `access_token` และคืน `204 No Content`; การ Logout ซ้ำต้องไม่ Error | ไม่มี Cookie ขณะ Logout → `204`; Logout ซ้ำ → `204`; Token เดิมยังใช้ได้จนหมดอายุ (Sprint 1 Stateless Limitation) | Public Endpoint; ทุก Role ใช้ได้ |
 | **AC-07.4** | Customer เห็นเฉพาะ Order ของตนเอง; Admin เห็น Order ทั้งหมด; Customer ไม่สามารถดู Order ของ Customer ท่านอื่นได้ | Customer A เรียก `GET /api/orders/:id` ของ Customer B → `403 FORBIDDEN_RESOURCE`; Customer เรียก `GET /api/orders` ต้องได้เฉพาะของตนเอง; Admin เรียกได้ทุก Order | Customer: Own only; Admin: All; Unauthenticated: `401` |
-| **AC-07.5** | การแบ่งแยกสิทธิ์ระหว่าง Customer และ Admin ทำงานตาม Access Matrix | Admin เรียก `POST /api/orders` → `403`; Customer เรียก `PATCH /api/admin/orders/:id/status` → `403`; Admin เรียก `PATCH` ได้; Customer เรียก `POST /api/orders` ได้เฉพาะของตนเอง | Customer: Order Creation/Own Read; Admin: All Orders/Status Update; ห้ามข้ามสิทธิ์ |
+| **AC-07.5** | การแบ่งแยกสิทธิ์ระหว่าง Customer และ Admin ทำงานตาม Access Matrix | Admin เรียก `POST /api/orders` → `403`; Customer เรียก `PATCH /api/v1/admin/orders/:id/status` → `403`; Admin เรียก `PATCH` ได้; Customer เรียก `POST /api/orders` ได้เฉพาะของตนเอง | Customer: Order Creation/Own Read; Admin: All Orders/Status Update; ห้ามข้ามสิทธิ์ |
 | **AC-07.6** | Public Endpoint (`GET /api/products`, `POST /api/auth/login`, `POST /api/auth/logout`) เข้าถึงได้โดยไม่ต้องมี Token; Protected Endpoint ต้องมี Token ที่ถูกต้อง | Unauthenticated เรียก Protected Endpoint → `401`; Unauthenticated เรียก `GET /api/products` → `200`; Unauthenticated เรียก Login/Logout → ทำงานตาม Contract | Public vs Protected แยกชัดเจน |
 | **AC-07.7** | ระบบป้องกันการปลอมแปลง JWT และการยกระดับสิทธิ์ (Privilege Escalation) | แก้ไข Claim `role` เป็น `ADMIN` โดยไม่มี Secret → Signature Verification ล้มเหลว → `401`; ใช้ JWT ที่ Sign ด้วย Secret อื่น → `401`; ต้องไม่สามารถเข้าถึง Admin Resource ได้ | ทุก Role; ต้องไม่มีการยกระดับสิทธิ์ |
 
@@ -180,12 +188,12 @@
 | **STS-F05-04** | AC-07.3 | API Integration / Boundary | Login สำเร็จและมี Cookie; เตรียมกรณีไม่มี Cookie | เรียก `POST /api/auth/logout` ด้วย Cookie, เรียกซ้ำอีกครั้ง, และเรียกโดยไม่มี Cookie | ทุกกรณีได้ `204 No Content`; Response มีการ Clear Cookie (`Max-Age=0`); ไม่มี Error |
 | **STS-F05-05** | AC-07.3 | Security / Boundary (Documented Limitation) | Login สำเร็จ; เก็บค่า Cookie เดิมไว้; เรียก Logout | นำ Cookie เดิมกลับมาเรียก Protected Endpoint ก่อน Token หมดอายุ | Endpoint ยังตอบสนองตาม Token ที่ยังไม่หมดอายุ (Sprint 1 Stateless Limitation); Test ต้องยืนยันพฤติกรรมนี้และไม่ถือเป็นช่องโหว่ที่ต้องแก้ใน Sprint 1 |
 | **STS-F05-06** | AC-07, AC-07.4 | Security / API Integration | Seed Customer A, Customer B, Admin; สร้าง Order ของ A และ B | Login เป็น A แล้วเรียก `GET /api/orders` และ `GET /api/orders/:id` ของ B; Login เป็น Admin แล้วเรียก Endpoint เดียวกัน | A เห็นเฉพาะ Order ของ A; A เรียก Order ของ B → `403 FORBIDDEN_RESOURCE`; Admin เห็น Order ทั้งหมดและเรียก Order ใดก็ได้ → `200` |
-| **STS-F05-07** | AC-07, AC-07.5 | Security / API Integration (Negative) | Seed Customer และ Admin; Login ทั้งสอง Role | Admin เรียก `POST /api/orders`; Customer เรียก `PATCH /api/admin/orders/:id/status`; Customer เรียก `POST /api/orders` ของตนเอง; Admin เรียก `PATCH /api/admin/orders/:id/status` | Admin สร้าง Order → `403 FORBIDDEN_ROLE`; Customer อัปเดตสถานะ → `403 FORBIDDEN_ROLE`; Customer สร้าง Order ของตนเอง → ผ่าน Authorization; Admin อัปเดตสถานะ → ผ่าน Authorization (Business Rule ของ F-04 ตรวจต่อ) |
+| **STS-F05-07** | AC-07, AC-07.5 | Security / API Integration (Negative) | Seed Customer และ Admin; Login ทั้งสอง Role | Admin เรียก `POST /api/orders`; Customer เรียก `PATCH /api/v1/admin/orders/:id/status`; Customer เรียก `POST /api/orders` ของตนเอง; Admin เรียก `PATCH /api/v1/admin/orders/:id/status` | Admin สร้าง Order → `403 FORBIDDEN_ROLE`; Customer อัปเดตสถานะ → `403 FORBIDDEN_ROLE`; Customer สร้าง Order ของตนเอง → ผ่าน Authorization; Admin อัปเดตสถานะ → ผ่าน Authorization (Business Rule ของ F-04 ตรวจต่อ) |
 | **STS-F05-08** | AC-07.6 | API Integration | ไม่มี Cookie; Seed Product | เรียก `GET /api/products`, `POST /api/auth/login`, `POST /api/auth/logout`, และ Protected Endpoint `GET /api/orders` | Public Endpoint ทำงานได้ตาม Contract (`200`/`204`); Protected Endpoint ได้ `401 UNAUTHORIZED`; ไม่มีข้อมูลรั่วไหล |
 | **STS-F05-09** | AC-07.7 | Security (Negative) | Seed Customer; Login แล้ว; มี JWT ที่ถูกต้อง | แก้ไข Claim `role` เป็น `ADMIN` โดยไม่ Sign ใหม่; และสร้าง JWT ใหม่ที่ Sign ด้วย Secret อื่น | ทั้งสองกรณีได้ `401 UNAUTHORIZED`; ไม่สามารถเรียก Admin Endpoint ได้; ไม่มีการยกระดับสิทธิ์ |
 | **STS-F05-10** | AC-07.1 | Security / Integration | Seed Customer พร้อม `bcrypt` Hash; เปิด Log Capture | Login สำเร็จและตรวจสอบ Response/Log; ตรวจสอบค่าในฐานข้อมูล | `passwordHash` ไม่ถูกส่งใน Response และไม่ปรากฏใน Log; ค่าในฐานข้อมูลไม่ใช่ Plaintext และตรวจสอบด้วย `bcrypt.compare` ได้; Salt Rounds = 10 |
 | **STS-F05-11** | AC-07.2 | Security / API Integration (Negative) | Protected Endpoint; ไม่มี Cookie | เรียก Endpoint ด้วย JWT ที่ Role เป็นค่าที่ไม่รู้จัก (เช่น `SUPERADMIN`) และ JWT ที่ไม่มี Claim `userId` | ได้ `401 UNAUTHORIZED`; ไม่มีการประมวลผล Business Logic; ไม่มีข้อมูลถูกส่งคืน |
-| **STS-F05-12** | AC-07.4, AC-07.5 | Security / API Integration (Negative) | Seed Customer A และ Customer B; Login เป็น A | เรียก `GET /api/orders/:id` ของ B และ `PATCH /api/admin/orders/:id/status` ของ B | `GET` Order ของ B → `403 FORBIDDEN_RESOURCE`; `PATCH` Admin Endpoint → `403 FORBIDDEN_ROLE`; ไม่มีข้อมูลของ B ถูกเปิดเผย |
+| **STS-F05-12** | AC-07.4, AC-07.5 | Security / API Integration (Negative) | Seed Customer A และ Customer B; Login เป็น A | เรียก `GET /api/orders/:id` ของ B และ `PATCH /api/v1/admin/orders/:id/status` ของ B | `GET` Order ของ B → `403 FORBIDDEN_RESOURCE`; `PATCH` Admin Endpoint → `403 FORBIDDEN_ROLE`; ไม่มีข้อมูลของ B ถูกเปิดเผย |
 
 ## 5. Completion Evidence
 - **TDD Evidence:**

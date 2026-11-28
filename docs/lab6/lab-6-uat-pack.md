@@ -12,9 +12,11 @@ This pack is the executable handoff and evidence worksheet for Lab 6. It covers 
 | Product Team students / IDs | Panuwat Boonsak (ภานุวัฒน์ บุญศักดิ์), 67070501034; Rattananan Siripolwat (รัตนนันทน์ สิริพลวัฒน์), 67070501038 |
 | Partner UAT Team students / IDs | [TBD] |
 | Sprint 1 tested release | Release 2, `main` commit `3e1b192e0f41bd7157cb5fc4c6e686995d60a1dc`; Lab 5 evidence does not state a separate Sprint 1 tag |
+| Corrected source release for Issues #23/#24 | `main` commit `ab3e0cc1990d1bb4bfdd841fabbd9d3cfab84e95`; deployment/retest identity must be recorded separately below |
 | Deployment evidence | Deploy run `44583799206`; image `asia-southeast1-docker.pkg.dev/cpe334-th-048-p4/food-ordering/food-ordering@sha256:52d603df80614b81a8ed4b64434432f57b3944bc8bdf02c66a7f8abcea628bdd` |
 | Cloud Run service / project / region | `food-ordering` / `cpe334-th-048-p4` / `asia-southeast1` |
 | Cloud Run revision receiving traffic | Confirm from Cloud Run before UAT; the Lab 5 PDF does not record the revision name or traffic percentage |
+| Corrected Cloud Run revision / traffic / image digest | `[Record exact active revision, traffic allocation, and resolved image digest after the corrected release deploys]` |
 | UAT base URL | `https://food-ordering-905668196750.asia-southeast1.run.app` |
 | Readiness endpoints | `/api/health` → `{"status":"ok"}`; `/api/ready` → `{"status":"ready","db":"connected"}` when ready. Neither returns a commit SHA. |
 | Scope accepted for testing | F-01 through F-05 as implemented and contracted for Sprint 1; see `docs/sprints/sprint-1/` |

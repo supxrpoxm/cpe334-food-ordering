@@ -1,76 +1,43 @@
 # Feature Contract: F-04 Admin Order Status Management
 
 ## 1. Feature Design & Business Rules
-- **Linked Requirements:** FR-04, BR-04, BR-05, NFR-02
-- **Behavior & Workflow:** ผู้ดูแลระบบ (Admin) สามารถดูรายการออเดอร์ทั้งหมด กรองตามสถานะ และทำการอัปเดตสถานะของออเดอร์ (เช่น PENDING -> CONFIRMED -> PREPARING -> READY -> COMPLETED / CANCELLED)
-- **Dependencies:** ขึ้นอยู่กับโมเดลข้อมูลคำสั่งซื้อจาก F-02 (Customer Order Placement) และระบบยืนยันตัวตน F-05 (RBAC & Auth)
-- **Business Rules & Validation:**
-  - เฉพาะผู้ใช้ที่มีบทบาท `ADMIN` หรือ `STAFF` เท่านั้นที่สามารถเปลี่ยนสถานะออเดอร์ได้
-  - การเปลี่ยนสถานะต้องเป็นไปตาม State Machine ที่กำหนด ห้ามข้ามขั้นตอนที่ไม่ได้รับอนุญาต
-  - หากออเดอร์อยู่ในสถานะ `COMPLETED` หรือ `CANCELLED` แล้ว ห้ามเปลี่ยนสถานะอีก (Terminal State)
-- **Failure / Boundary Cases:**
-  - ผู้ใช้งานทั่วไป (CUSTOMER) พยายามส่ง Request เปลี่ยนสถานะ: ส่งคืน 403 Forbidden
-  - พยายามเปลี่ยนสถานะข้ามขั้น (เช่น จาก PENDING ไป COMPLETED โดยตรง): ส่งคืน 400 Bad Request
-  - พยายามเปลี่ยนสถานะออเดอร์ที่ถูกยกเลิกไปแล้ว: ส่งคืน 400 Bad Request
-- **Permissions:** เฉพาะบทบาท `ADMIN` และ `STAFF`
+
+- **Linked requirements:** FR-03 (primary), BR-03 (status-transition rule), NFR-01 (authorization), NFR-02 (transactional status/history update).
+- **Prisma role baseline:** Sprint 1 implements only `CUSTOMER` and `ADMIN`. `STAFF` is not a supported enum value or authorized role in this release; store staff carrying out administrative tasks use an `ADMIN` account.
+- **Behavior:** An authenticated Admin lists all orders, optionally filters by status, and advances an order only through an allowed state transition. Each successful change writes an `OrderStatusHistory` record in the same database transaction.
+- **Allowed transitions:** `PENDING → CONFIRMED | CANCELLED | PAID`; `CONFIRMED → PREPARING | CANCELLED`; `PREPARING → READY | CANCELLED`; `READY → COMPLETED | CANCELLED`; `PAID → SHIPPED`; `SHIPPED → COMPLETED`. `COMPLETED` and `CANCELLED` are terminal states.
+- **Dependencies:** F-02 Order model and F-05 authentication/authorization; Prisma and PostgreSQL.
+- **Failure cases:** unauthenticated request → `401 UNAUTHORIZED`; authenticated Customer → `403 FORBIDDEN_ROLE`; unknown order → `404 ORDER_NOT_FOUND`; invalid status or transition → `400` (`VALIDATION_ERROR` or `INVALID_STATUS_TRANSITION`). Rejected transitions must not modify the order or create history.
 
 ## 2. Technical Specification
-- **UI Behavior:**
-  - หน้าแดชบอร์ด Admin แสดงตารางรายการคำสั่งซื้อเรียงจากใหม่อยู่บนสุด
-  - มี Dropdown เปลี่ยนสถานะในแต่ละแถวคำสั่งซื้อ พร้อมปุ่มยืนยัน
-  - มี Badge สีแสดงสถานะปัจจุบันอย่างชัดเจน
-- **API Methods & Paths:**
-  - `GET /api/v1/admin/orders` (ดึงรายการออเดอร์ทั้งหมดสำหรับ Admin)
-  - `PATCH /api/v1/admin/orders/:id/status` (อัปเดตสถานะออเดอร์)
-- **Request, Response & Error Shapes:**
-  - `PATCH /api/v1/admin/orders/:id/status` Request:
-    ```json
-    {
-      "status": "CONFIRMED"
-    }
-    ```
-  - Success (200 OK):
-    ```json
-    {
-      "success": true,
-      "data": {
-        "orderId": "ord_999",
-        "previousStatus": "PENDING",
-        "currentStatus": "CONFIRMED",
-        "updatedAt": "2026-11-10T00:00:00.000Z"
-      }
-    }
-    ```
-  - Error (400 Bad Request - Invalid Transition):
-    ```json
-    {
-      "success": false,
-      "error": {
-        "code": "INVALID_STATUS_TRANSITION",
-        "message": "ไม่สามารถเปลี่ยนสถานะจาก PENDING เป็น COMPLETED โดยตรงได้"
-      }
-    }
-    ```
-- **Data Fields, Constraints & Migrations:**
-  - อัปเดตคอลัมน์ `status` และ `updatedAt` ในตาราง `Order`
-  - บันทึก Audit Log การเปลี่ยนสถานะในตาราง `OrderStatusHistory`
 
-## 3. Acceptance Criteria (AC)
-| AC ID | Observable Expected Outcome | Relevant Negative / Boundary Behavior | Role Restrictions |
-| :--- | :--- | :--- | :--- |
-| AC-F04-01 | Admin สามารถดึงรายการออเดอร์ทั้งหมดและกรองตามสถานะได้ | ผู้ใช้บทบาท CUSTOMER ต้องถูกปฏิเสธด้วย 403 Forbidden | เฉพาะ ADMIN / STAFF |
-| AC-F04-02 | Admin สามารถเปลี่ยนสถานะออเดอร์ตาม State Machine ที่อนุญาตได้ | การเปลี่ยนสถานะข้ามขั้นที่ไม่ถูกต้อง ต้องถูกปฏิเสธด้วย 400 Bad Request | เฉพาะ ADMIN / STAFF |
-| AC-F04-03 | ออเดอร์ที่สิ้นสุดแล้ว (COMPLETED/CANCELLED) ต้องไม่สามารถเปลี่ยนสถานะได้อีก | หากพยายามอัปเดตออเดอร์ที่จบไปแล้ว ต้องได้รับ HTTP 400 Bad Request | เฉพาะ ADMIN / STAFF |
+- **UI:** `/admin/orders` presents orders newest first, status, totals and allowed status choices. The UI is a convenience; the API enforces Admin authorization.
+- **Implemented API:**
+  - `GET /api/v1/admin/orders` — Admin only; optional `?status=<OrderStatus>` filter.
+  - `PATCH /api/v1/admin/orders/:id/status` — Admin only; JSON body `{ "status": "CONFIRMED" }`.
+  - The unversioned `/api/admin/orders` path is not mounted by the Sprint 1 server.
+- **Successful response:** `200 OK` with `success: true` and `data` containing `orderId` (UUID), `previousStatus`, `currentStatus`, and `updatedAt`.
+- **Persistence:** update `Order.status` and create `OrderStatusHistory` inside one Prisma transaction. History stores old/new status, actor user ID, and timestamp.
 
-## 4. Software Test Specification (STS)
-| Test ID | Linked AC | Test Level | Precondition / Input | Action | Expected Result |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| STS-F04-01 | AC-F04-01 | Authorization | เข้าสู่ระบบในฐานะ CUSTOMER | เรียก `GET /api/v1/admin/orders` | ได้รับ HTTP 403 Forbidden |
-| STS-F04-02 | AC-F04-02 | Integration | มีออเดอร์สถานะ `PENDING` | เรียก `PATCH /api/v1/admin/orders/ord_1/status` ด้วย `{ "status": "COMPLETED" }` | ได้รับ HTTP 400 Bad Request พร้อม `INVALID_STATUS_TRANSITION` |
-| STS-F04-03 | AC-F04-03 | Integration | มีออเดอร์สถานะ `CANCELLED` | เรียก `PATCH /api/v1/admin/orders/ord_2/status` ด้วย `{ "status": "CONFIRMED" }` | ได้รับ HTTP 400 Bad Request |
+## 3. Acceptance Criteria
 
-## 5. Completion Evidence
-- **TDD Evidence:**
-  - Red Phase (Failing Tests): https://github.com/supxrpoxm/cpe334-food-ordering/commit/a3f67a7
-  - Green Phase (Passing Implementation): https://github.com/supxrpoxm/cpe334-food-ordering/commit/72e50da
-- **Merged PR:** [รอใส่ลิงก์ GitHub PR หลังเพื่อนกด Merge เข้า staging]
+| AC ID | Observable expected outcome | Negative/boundary behavior | Role |
+|---|---|---|---|
+| AC-F04-01 | Admin lists all orders and may filter by a valid status. | Customer receives `403 FORBIDDEN_ROLE`; no cookie receives `401 UNAUTHORIZED`; invalid filter receives `400`. | ADMIN only |
+| AC-F04-02 | Admin can make every allowed state-machine transition; response reports old/new state and history is recorded. | Skipped or otherwise disallowed transition receives `400 INVALID_STATUS_TRANSITION`; state/history remain unchanged. | ADMIN only |
+| AC-F04-03 | `COMPLETED` and `CANCELLED` orders remain terminal. | Attempt to change a terminal order receives `400`; no additional history record is written. | ADMIN only |
+
+## 4. Software Test Specification
+
+| Test ID | AC | Level | Action | Expected result |
+|---|---|---|---|---|
+| STS-F04-01 | AC-F04-01 | Authorization | Customer and unauthenticated clients call `GET /api/v1/admin/orders`. | `403 FORBIDDEN_ROLE` and `401 UNAUTHORIZED`, respectively. |
+| STS-F04-02 | AC-F04-02 | Integration | Admin attempts `PENDING → COMPLETED` for UUID `a31e74a0-d5ce-40fd-9b97-5305c17cf298`. | `400 INVALID_STATUS_TRANSITION`; status and history unchanged. |
+| STS-F04-03 | AC-F04-03 | Integration | Admin attempts to change `CANCELLED` or `COMPLETED`. | `400`; status remains terminal. |
+| STS-F04-04 | AC-F04-01/02 | Integration | Admin lists all orders, filters `CONFIRMED`, then applies the supported `PENDING → CONFIRMED → PREPARING → READY → COMPLETED` path. | Correct list/filter results; every transition succeeds and produces one history record. |
+
+Automated coverage: `tests/f04-admin-order-status.test.ts`.
+
+## 5. Traceability and implementation note
+
+FR-03 maps to F-04 and AC-F04-01–03. The Sprint 1 requirement catalog defines FR-01 through FR-03 and BR-01 through BR-03; references to FR-04, BR-04, BR-05, or role `STAFF` in earlier drafts were documentation inconsistencies and are not part of this baseline.
